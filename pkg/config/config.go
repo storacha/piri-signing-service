@@ -34,7 +34,7 @@ type Config struct {
 	Host                   string `mapstructure:"host"`
 	Port                   int    `mapstructure:"port"`
 	RPCUrl                 string `mapstructure:"rpc_url"`
-	ServiceContractAddress string `mapstructure:"contract_address"`
+	ServiceContractAddress string `mapstructure:"service_contract_address"`
 	DID                    string `mapstructure:"did"`
 	PrivateKey             string `mapstructure:"private_key"`
 	PrivateKeyPath         string `mapstructure:"private_key_path"`

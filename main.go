@@ -51,8 +51,8 @@ func init() {
 	rootCmd.Flags().String("rpc-url", "", "Ethereum RPC URL")
 	cobra.CheckErr(viper.BindPFlag("rpc_url", rootCmd.Flags().Lookup("rpc-url")))
 
-	rootCmd.Flags().String("contract-address", "", "FilecoinWarmStorageService contract address")
-	cobra.CheckErr(viper.BindPFlag("contract_address", rootCmd.Flags().Lookup("contract-address")))
+	rootCmd.Flags().String("service-contract-address", "", "FilecoinWarmStorageService contract address")
+	cobra.CheckErr(viper.BindPFlag("service_contract_address", rootCmd.Flags().Lookup("service-contract-address")))
 
 	rootCmd.Flags().String("did", "", "A DID web that identifies this service publicly")
 	cobra.CheckErr(viper.BindPFlag("did", rootCmd.Flags().Lookup("did")))
