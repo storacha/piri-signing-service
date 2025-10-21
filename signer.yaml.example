@@ -15,14 +15,17 @@ rpc_url: https://api.calibration.node.glif.io/rpc/v1
 # This address must match the on-chain deployment
 service_contract_address: "0x0000000000000000000000000000000000000000"
 
-# Method 1: Encrypted keystore file
-keystore_path: /path/to/your/keystore.json
-keystore_password: your-keystore-password
-
 # Private key configuration (choose one method)
+# Method 1: Multibase-encoded private key and DID web
+private_key: multibase-encoded-private-key
+did: did:web:service.example.com
+
 # Method 2: Direct private key file path
 # private_key_path: /path/to/your/private-key.hex
 
+# Method 3: Encrypted keystore file
+# keystore_path: /path/to/your/keystore.json
+# keystore_password: your-keystore-password
 
 # Environment variable overrides:
 # You can override any of these settings using environment variables:
@@ -30,6 +33,8 @@ keystore_password: your-keystore-password
 #   SIGNING_SERVICE_PORT=8080
 #   SIGNING_SERVICE_RPC_URL=https://your-rpc-endpoint.com
 #   SIGNING_SERVICE_SERVICE_CONTRACT_ADDRESS=0xYourContractAddress
+#   SIGNING_SERVICE_PRIVATE_KEY=MgCb...
+#   SIGNING_SERVICE_DID=did:web:service.example.com
 #   SIGNING_SERVICE_PRIVATE_KEY_PATH=/secure/path/to/key
 #   SIGNING_SERVICE_KEYSTORE_PATH=/secure/path/to/keystore.json
 #   SIGNING_SERVICE_KEYSTORE_PASSWORD=your-password

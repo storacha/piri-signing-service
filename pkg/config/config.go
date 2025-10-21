@@ -12,6 +12,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/viper"
+	ucantodid "github.com/storacha/go-ucanto/did"
+	"github.com/storacha/go-ucanto/principal"
+	ed25519 "github.com/storacha/go-ucanto/principal/ed25519/signer"
+	"github.com/storacha/go-ucanto/principal/signer"
 )
 
 const (
@@ -31,6 +35,8 @@ type Config struct {
 	Port                   int    `mapstructure:"port"`
 	RPCUrl                 string `mapstructure:"rpc_url"`
 	ServiceContractAddress string `mapstructure:"contract_address"`
+	DID                    string `mapstructure:"did"`
+	PrivateKey             string `mapstructure:"private_key"`
 	PrivateKeyPath         string `mapstructure:"private_key_path"`
 	KeystorePath           string `mapstructure:"keystore_path"`
 	KeystorePassword       string `mapstructure:"keystore_password"`
@@ -102,9 +108,20 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("invalid contract address: %s", c.ServiceContractAddress)
 	}
 
-	// Must have either private key or keystore
-	if c.PrivateKeyPath == "" && c.KeystorePath == "" {
-		return fmt.Errorf("either private_key_path or keystore_path must be provided (set via flags, env vars, or in signer.yaml)")
+	// Must have either private key, private key file or keystore
+	if c.PrivateKey == "" && c.PrivateKeyPath == "" && c.KeystorePath == "" {
+		return fmt.Errorf("either private_key, private_key_path or keystore_path must be provided (set via flags, env vars, or in signer.yaml)")
+	}
+
+	// If using private key, a did web is required
+	if c.PrivateKey != "" {
+		if c.DID == "" {
+			return fmt.Errorf("did is required when using private key")
+		}
+
+		if !strings.HasPrefix(c.DID, "did:web:") {
+			return fmt.Errorf("did must be a did:web")
+		}
 	}
 
 	// If using keystore, password is required
@@ -120,9 +137,30 @@ func (c *Config) ContractAddr() common.Address {
 	return common.HexToAddress(c.ServiceContractAddress)
 }
 
-// LoadPrivateKey loads a private key from a file
+// LoadSigner loads a multibase-encoded private key string
+// and wraps it in a signer along a DID
+func LoadSigner(key string, did string) (principal.Signer, error) {
+	k, err := ed25519.Parse(key)
+	if err != nil {
+		return nil, fmt.Errorf("parsing private key: %w", err)
+	}
+
+	d, err := ucantodid.Parse(did)
+	if err != nil {
+		return nil, fmt.Errorf("parsing DID: %w", err)
+	}
+
+	s, err := signer.Wrap(k, d)
+	if err != nil {
+		return nil, fmt.Errorf("wrapping server DID: %w", err)
+	}
+
+	return s, nil
+}
+
+// LoadPrivateKeyFromFile loads a private key from a file
 // The file can contain either hex-encoded or raw bytes
-func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
+func LoadPrivateKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading private key file: %w", err)

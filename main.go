@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -53,6 +54,12 @@ func init() {
 	rootCmd.Flags().String("contract-address", "", "FilecoinWarmStorageService contract address")
 	cobra.CheckErr(viper.BindPFlag("contract_address", rootCmd.Flags().Lookup("contract-address")))
 
+	rootCmd.Flags().String("did", "", "A DID web that identifies this service publicly")
+	cobra.CheckErr(viper.BindPFlag("did", rootCmd.Flags().Lookup("did")))
+
+	rootCmd.Flags().String("private-key", "", "Multibase-encoded private key string")
+	cobra.CheckErr(viper.BindPFlag("private_key", rootCmd.Flags().Lookup("private-key")))
+
 	rootCmd.Flags().String("private-key-path", "", "Path to private key file")
 	cobra.CheckErr(viper.BindPFlag("private_key_path", rootCmd.Flags().Lookup("private-key-path")))
 
@@ -74,12 +81,24 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Load private key
 	var privateKey *ecdsa.PrivateKey
-	if cfg.PrivateKeyPath != "" {
-		privateKey, err = config.LoadPrivateKey(cfg.PrivateKeyPath)
+	switch {
+	case cfg.PrivateKey != "":
+		// A ucanto signer is not used for now, but it's here for future use when we implement UCAN authentication
+		signer, err := config.LoadSigner(cfg.PrivateKey, cfg.DID)
+		if err != nil {
+			return fmt.Errorf("loading signer: %w", err)
+		}
+
+		privateKey, err = crypto.ToECDSA(signer.Raw())
+		if err != nil {
+			return fmt.Errorf("getting ECDSA key from signer: %w", err)
+		}
+	case cfg.PrivateKeyPath != "":
+		privateKey, err = config.LoadPrivateKeyFromFile(cfg.PrivateKeyPath)
 		if err != nil {
 			return fmt.Errorf("loading private key: %w", err)
 		}
-	} else {
+	default:
 		privateKey, err = config.LoadPrivateKeyFromKeystore(cfg.KeystorePath, cfg.KeystorePassword)
 		if err != nil {
 			return fmt.Errorf("loading keystore: %w", err)

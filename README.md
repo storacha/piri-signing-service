@@ -43,7 +43,10 @@ rpc_url: https://api.calibration.node.glif.io/rpc/v1
 service_contract_address: "0x8b7aa0a68f5717e400F1C4D37F7a28f84f76dF91"
 
 # Private key configuration (choose one)
-private_key_path: /secure/path/to/key.hex
+private_key: MgCb...
+did: did:web:service.example.com
+# OR
+# private_key_path: /secure/path/to/key.hex
 # OR
 # keystore_path: /secure/path/to/keystore.json
 # keystore_password: your-password

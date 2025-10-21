@@ -1,7 +1,7 @@
 {
   "app": "signer",
-  "privateKeyEnvVar": "",
-  "didEnvVar": "",
+  "privateKeyEnvVar": "SIGNING_SERVICE_PRIVATE_KEY",
+  "didEnvVar": "SIGNING_SERVICE_DID",
   "port": 0,
   "js": null,
   "domainBase": "",
