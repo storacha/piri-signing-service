@@ -2,7 +2,7 @@
   "app": "signer",
   "privateKeyEnvVar": "SIGNING_SERVICE_PRIVATE_KEY",
   "didEnvVar": "SIGNING_SERVICE_DID",
-  "port": 0,
+  "port": 7446,
   "js": null,
   "domainBase": "",
   "cloudflare": false,

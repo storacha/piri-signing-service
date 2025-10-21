@@ -16,7 +16,7 @@ FROM scratch
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /signer/signer /usr/bin/
 
-EXPOSE 8080
+EXPOSE 7446
 
 ENTRYPOINT ["/usr/bin/signer"]
-CMD ["--port", "8080"]
+CMD ["--port", "7446"]

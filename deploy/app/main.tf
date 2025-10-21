@@ -43,6 +43,7 @@ module "app" {
   source = "github.com/storacha/storoku//app?ref=v0.5.0"
   private_key = var.private_key
   private_key_env_var = "SIGNING_SERVICE_PRIVATE_KEY"
+  httpport = 7446
   principal_mapping = var.principal_mapping
   did = var.did
   did_env_var = "SIGNING_SERVICE_DID"
