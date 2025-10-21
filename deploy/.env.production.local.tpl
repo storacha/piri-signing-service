@@ -1,6 +1,12 @@
-# Place any environment variables you want to available to your docker container 
-# here. If you want to use different values based on terraform vars or other 
-# values in env.terraform.tpl, this script is processed by ESH 
-# (https://github.com/jirutka/esh) and copied to env.production.local before it 
-# is used, so you can use that functionality to interpolate variables and 
-# generally do conditional rendering based on bash scripting.
+<%
+if [ "$TF_WORKSPACE" == "prod" ]; then
+  SIGNING_SERVICE_RPC_URL="https://api.node.glif.io/rpc/v1"
+  SIGNING_SERVICE_SERVICE_CONTRACT_ADDRESS="0xB9753937D3Bc1416f7d741d75b1671A1edb3e10A"
+else
+  SIGNING_SERVICE_RPC_URL="https://api.calibration.node.glif.io/rpc/v1"
+  SIGNING_SERVICE_SERVICE_CONTRACT_ADDRESS="0xB9753937D3Bc1416f7d741d75b1671A1edb3e10A"
+fi
+%>
+
+SIGNING_SERVICE_RPC_URL=<%= $SIGNING_SERVICE_RPC_URL %>
+SIGNING_SERVICE_SERVICE_CONTRACT_ADDRESS=<%= $SIGNING_SERVICE_SERVICE_CONTRACT_ADDRESS %>
