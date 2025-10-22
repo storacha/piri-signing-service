@@ -112,7 +112,7 @@ The following must be provided (no defaults):
 ### Health Check
 
 ```bash
-curl http://localhost:7446/health
+curl http://localhost:7446/healthcheck
 ```
 
 ### Sign Create Dataset

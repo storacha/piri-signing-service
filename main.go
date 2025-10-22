@@ -139,7 +139,7 @@ func run(cmd *cobra.Command, args []string) error {
 	handler := handlers.NewHandler(s)
 
 	// Setup routes
-	e.GET("/health", handler.Health)
+	e.GET("/healthcheck", handler.Health)
 	e.POST("/sign/create-dataset", handler.SignCreateDataSet)
 	e.POST("/sign/add-pieces", handler.SignAddPieces)
 	e.POST("/sign/schedule-piece-removals", handler.SignSchedulePieceRemovals)

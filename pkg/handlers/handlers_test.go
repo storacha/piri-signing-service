@@ -35,7 +35,7 @@ func TestHealth(t *testing.T) {
 	s := createTestSigner(t)
 	handler := NewHandler(s)
 
-	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req := httptest.NewRequest(http.MethodGet, "/healthcheck", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
