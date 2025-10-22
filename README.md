@@ -43,13 +43,12 @@ rpc_url: https://api.calibration.node.glif.io/rpc/v1
 service_contract_address: "0x8b7aa0a68f5717e400F1C4D37F7a28f84f76dF91"
 
 # Private key configuration (choose one)
-private_key: MgCb...
-did: did:web:service.example.com
+signing_key: "0x0000000000000000000000000000000000000000"
 # OR
-# private_key_path: /secure/path/to/key.hex
+# signing_key_path: /secure/path/to/key.hex
 # OR
-# keystore_path: /secure/path/to/keystore.json
-# keystore_password: your-password
+# signing_keystore_path: /secure/path/to/keystore.json
+# signing_keystore_password: your-password
 ```
 
 See `signer.yaml.example` for full configuration options.
