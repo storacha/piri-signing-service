@@ -27,7 +27,7 @@ const (
 	EnvPrefix = "SIGNING_SERVICE"
 
 	// Config file name (without extension)
-	ConfigFileName = "config"
+	ConfigFileName = "signer"
 )
 
 type Config struct {
