@@ -31,15 +31,16 @@ const (
 )
 
 type Config struct {
-	Host                   string `mapstructure:"host"`
-	Port                   int    `mapstructure:"port"`
-	RPCUrl                 string `mapstructure:"rpc_url"`
-	ServiceContractAddress string `mapstructure:"service_contract_address"`
-	DID                    string `mapstructure:"did"`
-	PrivateKey             string `mapstructure:"private_key"`
-	PrivateKeyPath         string `mapstructure:"private_key_path"`
-	KeystorePath           string `mapstructure:"keystore_path"`
-	KeystorePassword       string `mapstructure:"keystore_password"`
+	Host                    string `mapstructure:"host"`
+	Port                    int    `mapstructure:"port"`
+	RPCUrl                  string `mapstructure:"rpc_url"`
+	ServiceContractAddress  string `mapstructure:"service_contract_address"`
+	ServiceKey              string `mapstructure:"service_key"`
+	ServiceDID              string `mapstructure:"service_did"`
+	SigningKey              string `mapstructure:"signing_key"`
+	SigningKeyPath          string `mapstructure:"signing_key_path"`
+	SigningKeystorePath     string `mapstructure:"signing_keystore_path"`
+	SigningKeystorePassword string `mapstructure:"signing_keystore_password"`
 }
 
 // InitViper initializes Viper with defaults and binds it to Cobra flags
@@ -108,25 +109,25 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("invalid contract address: %s", c.ServiceContractAddress)
 	}
 
-	// Must have either private key, private key file or keystore
-	if c.PrivateKey == "" && c.PrivateKeyPath == "" && c.KeystorePath == "" {
-		return fmt.Errorf("either private_key, private_key_path or keystore_path must be provided (set via flags, env vars, or in signer.yaml)")
-	}
-
-	// If using private key, a did web is required
-	if c.PrivateKey != "" {
-		if c.DID == "" {
-			return fmt.Errorf("did is required when using private key")
+	// If using service key, a did web is required
+	if c.ServiceKey != "" {
+		if c.ServiceDID == "" {
+			return fmt.Errorf("did is required when using service key")
 		}
 
-		if !strings.HasPrefix(c.DID, "did:web:") {
+		if !strings.HasPrefix(c.ServiceDID, "did:web:") {
 			return fmt.Errorf("did must be a did:web")
 		}
 	}
 
+	// Must have either signing key, signing key file or keystore
+	if c.SigningKey == "" && c.SigningKeyPath == "" && c.SigningKeystorePath == "" {
+		return fmt.Errorf("either signing_key, signing_key_path or signing_keystore_path must be provided (set via flags, env vars, or in signer.yaml)")
+	}
+
 	// If using keystore, password is required
-	if c.KeystorePath != "" && c.KeystorePassword == "" {
-		return fmt.Errorf("keystore_password is required when using keystore")
+	if c.SigningKeystorePath != "" && c.SigningKeystorePassword == "" {
+		return fmt.Errorf("signing_keystore_password is required when using signing_keystore_path")
 	}
 
 	return nil
@@ -137,9 +138,9 @@ func (c *Config) ContractAddr() common.Address {
 	return common.HexToAddress(c.ServiceContractAddress)
 }
 
-// LoadSigner loads a multibase-encoded private key string
+// LoadServiceSigner loads a multibase-encoded service key string
 // and wraps it in a signer along a DID
-func LoadSigner(key string, did string) (principal.Signer, error) {
+func LoadServiceSigner(key string, did string) (principal.Signer, error) {
 	k, err := ed25519.Parse(key)
 	if err != nil {
 		return nil, fmt.Errorf("parsing private key: %w", err)
@@ -158,16 +159,11 @@ func LoadSigner(key string, did string) (principal.Signer, error) {
 	return s, nil
 }
 
-// LoadPrivateKeyFromFile loads a private key from a file
-// The file can contain either hex-encoded or raw bytes
-func LoadPrivateKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("reading private key file: %w", err)
-	}
-
+// LoadSigningKey loads a signing key from a string
+// The byte slice can contain either hex-encoded or raw bytes
+func LoadSigningKey(data string) (*ecdsa.PrivateKey, error) {
 	// Trim whitespace
-	keyData := strings.TrimSpace(string(data))
+	keyData := strings.TrimSpace(data)
 
 	// Try hex decoding first
 	keyData = strings.TrimPrefix(keyData, "0x")
@@ -175,19 +171,30 @@ func LoadPrivateKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 	keyBytes, err := hex.DecodeString(keyData)
 	if err != nil {
 		// If hex decoding fails, try using the raw bytes
-		keyBytes = data
+		keyBytes = []byte(data)
 	}
 
-	privateKey, err := crypto.ToECDSA(keyBytes)
+	key, err := crypto.ToECDSA(keyBytes)
 	if err != nil {
 		return nil, fmt.Errorf("parsing private key: %w", err)
 	}
 
-	return privateKey, nil
+	return key, nil
 }
 
-// LoadPrivateKeyFromKeystore loads a private key from an encrypted keystore file
-func LoadPrivateKeyFromKeystore(keystorePath, password string) (*ecdsa.PrivateKey, error) {
+// LoadSigningKeyFromFile loads a signing key from a file
+// The file can contain either hex-encoded or raw bytes
+func LoadSigningKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading private key file: %w", err)
+	}
+
+	return LoadSigningKey(string(data))
+}
+
+// LoadSigningKeyFromKeystore loads a signing key from an encrypted keystore file
+func LoadSigningKeyFromKeystore(keystorePath, password string) (*ecdsa.PrivateKey, error) {
 	keystoreJSON, err := os.ReadFile(keystorePath)
 	if err != nil {
 		return nil, fmt.Errorf("reading keystore file: %w", err)

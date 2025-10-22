@@ -88,7 +88,7 @@ All configuration can be set via environment variables with the `SIGNING_SERVICE
 ```bash
 export SIGNING_SERVICE_RPC_URL=https://api.calibration.node.glif.io/rpc/v1
 export SIGNING_SERVICE_SERVICE_CONTRACT_ADDRESS=0x8b7aa0a68f5717e400F1C4D37F7a28f84f76dF91
-export SIGNING_SERVICE_PRIVATE_KEY_PATH=/secure/path/to/key.hex
+export SIGNING_SERVICE_SIGNING_KEY_PATH=/secure/path/to/key.hex
 ```
 
 #### Via Command-line Flags
@@ -97,7 +97,7 @@ export SIGNING_SERVICE_PRIVATE_KEY_PATH=/secure/path/to/key.hex
 ./signing-service \
   --rpc-url=https://api.calibration.node.glif.io/rpc/v1 \
   --contract-address=0x8b7aa0a68f5717e400F1C4D37F7a28f84f76dF91 \
-  --private-key-path=/secure/path/to/key.hex
+  --signing-key-path=/secure/path/to/key.hex
 ```
 
 ### Required Configuration
@@ -105,7 +105,7 @@ export SIGNING_SERVICE_PRIVATE_KEY_PATH=/secure/path/to/key.hex
 The following must be provided (no defaults):
 - `rpc_url` - Ethereum RPC endpoint
 - `service_contract_address` - FilecoinWarmStorageService contract address
-- Either `private_key_path` OR `keystore_path` + `keystore_password`
+- Either `signing_key` OR `signing_key_path` OR `signing_keystore_path` + `signing_keystore_password`
 
 ## API Endpoints
 

@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -54,20 +53,23 @@ func init() {
 	rootCmd.Flags().String("service-contract-address", "", "FilecoinWarmStorageService contract address")
 	cobra.CheckErr(viper.BindPFlag("service_contract_address", rootCmd.Flags().Lookup("service-contract-address")))
 
-	rootCmd.Flags().String("did", "", "A DID web that identifies this service publicly")
-	cobra.CheckErr(viper.BindPFlag("did", rootCmd.Flags().Lookup("did")))
+	rootCmd.Flags().String("service-key", "", "Multibase-encoded private service key string")
+	cobra.CheckErr(viper.BindPFlag("service_key", rootCmd.Flags().Lookup("service-key")))
 
-	rootCmd.Flags().String("private-key", "", "Multibase-encoded private key string")
-	cobra.CheckErr(viper.BindPFlag("private_key", rootCmd.Flags().Lookup("private-key")))
+	rootCmd.Flags().String("service-did", "", "A DID web that identifies this service publicly")
+	cobra.CheckErr(viper.BindPFlag("service_did", rootCmd.Flags().Lookup("service-did")))
 
-	rootCmd.Flags().String("private-key-path", "", "Path to private key file")
-	cobra.CheckErr(viper.BindPFlag("private_key_path", rootCmd.Flags().Lookup("private-key-path")))
+	rootCmd.Flags().String("signing-key", "", "Hex-encoded private signing key string")
+	cobra.CheckErr(viper.BindPFlag("signing_key", rootCmd.Flags().Lookup("signing-key")))
 
-	rootCmd.Flags().String("keystore-path", "", "Path to keystore file")
-	cobra.CheckErr(viper.BindPFlag("keystore_path", rootCmd.Flags().Lookup("keystore-path")))
+	rootCmd.Flags().String("signing-key-path", "", "Path to private signing key file")
+	cobra.CheckErr(viper.BindPFlag("signing_key_path", rootCmd.Flags().Lookup("signing-key-path")))
 
-	rootCmd.Flags().String("keystore-password", "", "Keystore password")
-	cobra.CheckErr(viper.BindPFlag("keystore_password", rootCmd.Flags().Lookup("keystore-password")))
+	rootCmd.Flags().String("signing-keystore-path", "", "Path to signing keystore file")
+	cobra.CheckErr(viper.BindPFlag("signing_keystore_path", rootCmd.Flags().Lookup("signing-keystore-path")))
+
+	rootCmd.Flags().String("signing-keystore-password", "", "Signing keystore password")
+	cobra.CheckErr(viper.BindPFlag("signing_keystore_password", rootCmd.Flags().Lookup("signing-keystore-password")))
 }
 
 func run(cmd *cobra.Command, args []string) error {
@@ -79,27 +81,30 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("loading configuration: %w", err)
 	}
 
-	// Load private key
-	var privateKey *ecdsa.PrivateKey
-	switch {
-	case cfg.PrivateKey != "":
-		// A ucanto signer is not used for now, but it's here for future use when we implement UCAN authentication
-		signer, err := config.LoadSigner(cfg.PrivateKey, cfg.DID)
-		if err != nil {
-			return fmt.Errorf("loading signer: %w", err)
-		}
+	// TODO(vic): leaving this here for future use when we implement UCAN authentication
+	// Load service identity
+	// if cfg.ServiceKey != "" {
+	// 	id, err := config.LoadServiceSigner(cfg.ServiceKey, cfg.DID)
+	// 	if err != nil {
+	// 		return fmt.Errorf("loading service signer: %w", err)
+	// 	}
+	// }
 
-		privateKey, err = crypto.ToECDSA(signer.Raw())
-		if err != nil {
-			return fmt.Errorf("getting ECDSA key from signer: %w", err)
-		}
-	case cfg.PrivateKeyPath != "":
-		privateKey, err = config.LoadPrivateKeyFromFile(cfg.PrivateKeyPath)
+	// Load private signing key
+	var signingKey *ecdsa.PrivateKey
+	switch {
+	case cfg.SigningKey != "":
+		signingKey, err = config.LoadSigningKey(cfg.SigningKey)
 		if err != nil {
 			return fmt.Errorf("loading private key: %w", err)
 		}
+	case cfg.SigningKeyPath != "":
+		signingKey, err = config.LoadSigningKeyFromFile(cfg.SigningKeyPath)
+		if err != nil {
+			return fmt.Errorf("loading private key from file: %w", err)
+		}
 	default:
-		privateKey, err = config.LoadPrivateKeyFromKeystore(cfg.KeystorePath, cfg.KeystorePassword)
+		signingKey, err = config.LoadSigningKeyFromKeystore(cfg.SigningKeystorePath, cfg.SigningKeystorePassword)
 		if err != nil {
 			return fmt.Errorf("loading keystore: %w", err)
 		}
@@ -118,7 +123,7 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create EIP-712 signer
-	s := signer.NewSigner(privateKey, chainID, cfg.ContractAddr())
+	s := signer.NewSigner(signingKey, chainID, cfg.ContractAddr())
 
 	// Create Echo instance
 	e := echo.New()
