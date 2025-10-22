@@ -19,4 +19,4 @@ COPY --from=build /signer/signer /usr/bin/
 EXPOSE 7446
 
 ENTRYPOINT ["/usr/bin/signer"]
-CMD ["--port", "7446"]
+CMD ["--host", "0.0.0.0", "--port", "7446"]
