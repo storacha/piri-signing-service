@@ -138,22 +138,22 @@ func (c *Config) ContractAddr() common.Address {
 	return common.HexToAddress(c.ServiceContractAddress)
 }
 
-// LoadServiceSigner loads a multibase-encoded service key string
+// LoadServiceIdentity loads a multibase-encoded service key string
 // and wraps it in a signer along a DID
-func LoadServiceSigner(key string, did string) (principal.Signer, error) {
+func LoadServiceIdentity(key string, did string) (principal.Signer, error) {
 	k, err := ed25519.Parse(key)
 	if err != nil {
-		return nil, fmt.Errorf("parsing private key: %w", err)
+		return nil, fmt.Errorf("parsing service key: %w", err)
 	}
 
 	d, err := ucantodid.Parse(did)
 	if err != nil {
-		return nil, fmt.Errorf("parsing DID: %w", err)
+		return nil, fmt.Errorf("parsing service DID: %w", err)
 	}
 
 	s, err := signer.Wrap(k, d)
 	if err != nil {
-		return nil, fmt.Errorf("wrapping server DID: %w", err)
+		return nil, fmt.Errorf("wrapping service key: %w", err)
 	}
 
 	return s, nil
@@ -176,7 +176,7 @@ func LoadSigningKey(data string) (*ecdsa.PrivateKey, error) {
 
 	key, err := crypto.ToECDSA(keyBytes)
 	if err != nil {
-		return nil, fmt.Errorf("parsing private key: %w", err)
+		return nil, fmt.Errorf("parsing signing key: %w", err)
 	}
 
 	return key, nil
@@ -187,7 +187,7 @@ func LoadSigningKey(data string) (*ecdsa.PrivateKey, error) {
 func LoadSigningKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("reading private key file: %w", err)
+		return nil, fmt.Errorf("reading signing key file: %w", err)
 	}
 
 	return LoadSigningKey(string(data))
@@ -197,12 +197,12 @@ func LoadSigningKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 func LoadSigningKeyFromKeystore(keystorePath, password string) (*ecdsa.PrivateKey, error) {
 	keystoreJSON, err := os.ReadFile(keystorePath)
 	if err != nil {
-		return nil, fmt.Errorf("reading keystore file: %w", err)
+		return nil, fmt.Errorf("reading signing keystore file: %w", err)
 	}
 
 	key, err := keystore.DecryptKey(keystoreJSON, password)
 	if err != nil {
-		return nil, fmt.Errorf("decrypting keystore: %w", err)
+		return nil, fmt.Errorf("decrypting signing keystore: %w", err)
 	}
 
 	return key.PrivateKey, nil

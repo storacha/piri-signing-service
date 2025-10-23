@@ -84,9 +84,9 @@ func run(cmd *cobra.Command, args []string) error {
 	// TODO(vic): leaving this here for future use when we implement UCAN authentication
 	// Load service identity
 	// if cfg.ServiceKey != "" {
-	// 	id, err := config.LoadServiceSigner(cfg.ServiceKey, cfg.DID)
+	// 	id, err := config.LoadServiceIdentity(cfg.ServiceKey, cfg.DID)
 	// 	if err != nil {
-	// 		return fmt.Errorf("loading service signer: %w", err)
+	// 		return fmt.Errorf("loading service identity: %w", err)
 	// 	}
 	// }
 
@@ -96,17 +96,17 @@ func run(cmd *cobra.Command, args []string) error {
 	case cfg.SigningKey != "":
 		signingKey, err = config.LoadSigningKey(cfg.SigningKey)
 		if err != nil {
-			return fmt.Errorf("loading private key: %w", err)
+			return fmt.Errorf("loading signing key: %w", err)
 		}
 	case cfg.SigningKeyPath != "":
 		signingKey, err = config.LoadSigningKeyFromFile(cfg.SigningKeyPath)
 		if err != nil {
-			return fmt.Errorf("loading private key from file: %w", err)
+			return fmt.Errorf("loading signing key from file: %w", err)
 		}
 	default:
 		signingKey, err = config.LoadSigningKeyFromKeystore(cfg.SigningKeystorePath, cfg.SigningKeystorePassword)
 		if err != nil {
-			return fmt.Errorf("loading keystore: %w", err)
+			return fmt.Errorf("loading signing keystore: %w", err)
 		}
 	}
 
