@@ -106,6 +106,15 @@ The following must be provided (no defaults):
 - `service_contract_address` - FilecoinWarmStorageService contract address
 - Either `signing_key` OR `signing_key_path` OR `signing_keystore_path` + `signing_keystore_password`
 
+
+## Service deployment
+
+This project contains Terraform/OpenTofu deployment scripts for the service, generated using the [storoku](https://github.com/storacha/storoku) tool. The scripts are located in the [deploy](/deploy) directory.
+
+A GitHub Actions workflow will deploy the service when a new release is created. These deployments can also be triggered manually from a development environment.
+
+Required environment variables **that are not secrets** are set in [deploy/.env.production.local.tpl](/deploy/.env.production.local.tpl). More specifically, `rpc_url` and `service_contract_address` are defined there (as `SIGNING_SERVICE_RPC_URL` and `SIGNING_SERVICE_SERVICE_CONTRACT_ADDRESS`, respectively).
+
 ## API Endpoints
 
 ### Health Check
