@@ -43,10 +43,12 @@ rpc_url: https://api.calibration.node.glif.io/rpc/v1
 service_contract_address: "0x8b7aa0a68f5717e400F1C4D37F7a28f84f76dF91"
 
 # Private key configuration (choose one)
-private_key_path: /secure/path/to/key.hex
+signing_key: "0x0000000000000000000000000000000000000000"
 # OR
-# keystore_path: /secure/path/to/keystore.json
-# keystore_password: your-password
+# signing_key_path: /secure/path/to/key.hex
+# OR
+# signing_keystore_path: /secure/path/to/keystore.json
+# signing_keystore_password: your-password
 ```
 
 See `signer.yaml.example` for full configuration options.
@@ -85,7 +87,7 @@ All configuration can be set via environment variables with the `SIGNING_SERVICE
 ```bash
 export SIGNING_SERVICE_RPC_URL=https://api.calibration.node.glif.io/rpc/v1
 export SIGNING_SERVICE_SERVICE_CONTRACT_ADDRESS=0x8b7aa0a68f5717e400F1C4D37F7a28f84f76dF91
-export SIGNING_SERVICE_PRIVATE_KEY_PATH=/secure/path/to/key.hex
+export SIGNING_SERVICE_SIGNING_KEY_PATH=/secure/path/to/key.hex
 ```
 
 #### Via Command-line Flags
@@ -94,7 +96,7 @@ export SIGNING_SERVICE_PRIVATE_KEY_PATH=/secure/path/to/key.hex
 ./signing-service \
   --rpc-url=https://api.calibration.node.glif.io/rpc/v1 \
   --contract-address=0x8b7aa0a68f5717e400F1C4D37F7a28f84f76dF91 \
-  --private-key-path=/secure/path/to/key.hex
+  --signing-key-path=/secure/path/to/key.hex
 ```
 
 ### Required Configuration
@@ -102,14 +104,23 @@ export SIGNING_SERVICE_PRIVATE_KEY_PATH=/secure/path/to/key.hex
 The following must be provided (no defaults):
 - `rpc_url` - Ethereum RPC endpoint
 - `service_contract_address` - FilecoinWarmStorageService contract address
-- Either `private_key_path` OR `keystore_path` + `keystore_password`
+- Either `signing_key` OR `signing_key_path` OR `signing_keystore_path` + `signing_keystore_password`
+
+
+## Service deployment
+
+This project contains Terraform/OpenTofu deployment scripts for the service, generated using the [storoku](https://github.com/storacha/storoku) tool. The scripts are located in the [deploy](/deploy) directory.
+
+A GitHub Actions workflow will deploy the service when a new release is created. These deployments can also be triggered manually from a development environment.
+
+Required environment variables **that are not secrets** are set in [deploy/.env.production.local.tpl](/deploy/.env.production.local.tpl). More specifically, `rpc_url` and `service_contract_address` are defined there (as `SIGNING_SERVICE_RPC_URL` and `SIGNING_SERVICE_SERVICE_CONTRACT_ADDRESS`, respectively).
 
 ## API Endpoints
 
 ### Health Check
 
 ```bash
-curl http://localhost:7446/health
+curl http://localhost:7446/healthcheck
 ```
 
 ### Sign Create Dataset
