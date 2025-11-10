@@ -1,171 +1,226 @@
 package client
 
 import (
-	"bytes"
 	"context"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io"
 	"math/big"
 	"net/http"
+	"net/url"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/storacha/filecoin-services/go/eip712"
-	"github.com/storacha/piri-signing-service/pkg/types"
+	"github.com/storacha/go-libstoracha/capabilities/pdp/sign"
+	"github.com/storacha/go-ucanto/client"
+	"github.com/storacha/go-ucanto/core/dag/blockstore"
+	"github.com/storacha/go-ucanto/core/delegation"
+	"github.com/storacha/go-ucanto/core/invocation"
+	"github.com/storacha/go-ucanto/core/ipld"
+	"github.com/storacha/go-ucanto/core/receipt"
+	"github.com/storacha/go-ucanto/core/result"
+	fdm "github.com/storacha/go-ucanto/core/result/failure/datamodel"
+	ucan_http "github.com/storacha/go-ucanto/transport/http"
+	"github.com/storacha/go-ucanto/ucan"
 )
 
 // Client implements types.SigningService using HTTP calls to a remote signing service
 type Client struct {
-	baseURL    string
-	httpClient *http.Client
+	Connection client.Connection
 }
 
-// Verify that Client implements types.SigningService at compile time
-var _ types.SigningService = (*Client)(nil)
+// New creates a new client for the signing service.
+func New(serviceID ucan.Principal, serviceURL string) (*Client, error) {
+	return NewWithHTTPClient(serviceID, serviceURL, &http.Client{})
+}
 
-// New creates a new HTTP client for the signing service
-func New(baseURL string) *Client {
-	return &Client{
-		baseURL:    baseURL,
-		httpClient: &http.Client{},
+// NewWithHTTPClient creates a new signing service client with a custom HTTP client.
+func NewWithHTTPClient(serviceID ucan.Principal, serviceURL string, httpClient *http.Client) (*Client, error) {
+	endpoint, err := url.Parse(serviceURL)
+	if err != nil {
+		return nil, fmt.Errorf("parsing signing service URL: %w", err)
 	}
-}
-
-// NewWithHTTPClient creates a new HTTP client with a custom HTTP client
-func NewWithHTTPClient(baseURL string, httpClient *http.Client) *Client {
-	return &Client{
-		baseURL:    baseURL,
-		httpClient: httpClient,
+	channel := ucan_http.NewChannel(endpoint, ucan_http.WithClient(httpClient))
+	conn, err := client.NewConnection(serviceID, channel)
+	if err != nil {
+		return nil, fmt.Errorf("creating signing service connection: %w", err)
 	}
+	return &Client{conn}, nil
 }
 
-// SignCreateDataSet signs a CreateDataSet operation via HTTP
-func (c *Client) SignCreateDataSet(ctx context.Context,
-	clientDataSetId *big.Int,
+// SignCreateDataSet signs a CreateDataSet operation via UCAN invocation
+func (c *Client) SignCreateDataSet(
+	ctx context.Context,
+	issuer ucan.Signer,
+	dataSet *big.Int,
 	payee common.Address,
-	metadata []eip712.MetadataEntry) (*eip712.AuthSignature, error) {
-
-	req := types.CreateDataSetRequest{
-		ClientDataSetId: clientDataSetId.String(),
-		Payee:           payee.Hex(),
-		Metadata:        metadata,
+	metadata []eip712.MetadataEntry,
+	options ...delegation.Option,
+) (*eip712.AuthSignature, error) {
+	inv, err := sign.DataSetCreate.Invoke(
+		issuer,
+		c.Connection.ID(),
+		c.Connection.ID().DID().String(),
+		sign.DataSetCreateCaveats{
+			DataSet:  dataSet,
+			Payee:    payee,
+			Metadata: fromEIP712MetadataEntries(metadata),
+		},
+		options...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("invoking %s: %w", sign.DataSetCreateAbility, err)
 	}
-
-	var sig eip712.AuthSignature
-	if err := c.post(ctx, "/sign/create-dataset", req, &sig); err != nil {
-		return nil, fmt.Errorf("signing create dataset: %w", err)
-	}
-
-	return &sig, nil
+	return execInvocation(ctx, c.Connection, inv)
 }
 
-// SignAddPieces signs an AddPieces operation via HTTP
-func (c *Client) SignAddPieces(ctx context.Context,
-	clientDataSetId *big.Int,
+// SignAddPieces signs an AddPieces operation via UCAN invocation
+func (c *Client) SignAddPieces(
+	ctx context.Context,
+	issuer ucan.Signer,
+	dataSet *big.Int,
 	firstAdded *big.Int,
 	pieceData [][]byte,
-	metadata [][]eip712.MetadataEntry) (*eip712.AuthSignature, error) {
-
-	// Convert pieceData to hex strings
-	pieceDataHex := make([]string, len(pieceData))
-	for i, data := range pieceData {
-		pieceDataHex[i] = hex.EncodeToString(data)
+	metadata [][]eip712.MetadataEntry,
+	proofs [][]receipt.AnyReceipt,
+	options ...delegation.Option,
+) (*eip712.AuthSignature, error) {
+	proofLinks := make([][]ipld.Link, 0, len(proofs))
+	for _, ps := range proofs {
+		links := make([]ipld.Link, 0, len(ps))
+		for _, r := range ps {
+			links = append(links, r.Root().Link())
+		}
+		proofLinks = append(proofLinks, links)
 	}
 
-	req := types.AddPiecesRequest{
-		ClientDataSetId: clientDataSetId.String(),
-		FirstAdded:      firstAdded.String(),
-		PieceData:       pieceDataHex,
-		Metadata:        metadata,
+	metaModel := make([]sign.Metadata, 0, len(metadata))
+	for _, m := range metadata {
+		metaModel = append(metaModel, fromEIP712MetadataEntries(m))
 	}
 
-	var sig eip712.AuthSignature
-	if err := c.post(ctx, "/sign/add-pieces", req, &sig); err != nil {
-		return nil, fmt.Errorf("signing add pieces: %w", err)
+	inv, err := sign.PiecesAdd.Invoke(
+		issuer,
+		c.Connection.ID(),
+		c.Connection.ID().DID().String(),
+		sign.PiecesAddCaveats{
+			DataSet:    dataSet,
+			FirstAdded: firstAdded,
+			PieceData:  pieceData,
+			Metadata:   metaModel,
+			Proofs:     proofLinks,
+		},
+		options...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("invoking %s: %w", sign.PiecesAddAbility, err)
 	}
 
-	return &sig, nil
+	for _, ps := range proofs {
+		for _, r := range ps {
+			for b, err := range r.Export() {
+				if err != nil {
+					return nil, fmt.Errorf("iterating blocks in receipt %s: %w", r.Root().Link(), err)
+				}
+				if err := inv.Attach(b); err != nil {
+					return nil, fmt.Errorf("attaching block %s: %w", b.Link(), err)
+				}
+			}
+		}
+	}
+
+	return execInvocation(ctx, c.Connection, inv)
 }
 
-// SignSchedulePieceRemovals signs a SchedulePieceRemovals operation via HTTP
-func (c *Client) SignSchedulePieceRemovals(ctx context.Context,
-	clientDataSetId *big.Int,
-	pieceIds []*big.Int) (*eip712.AuthSignature, error) {
-
-	// Convert pieceIds to strings
-	pieceIdsStr := make([]string, len(pieceIds))
-	for i, id := range pieceIds {
-		pieceIdsStr[i] = id.String()
+// SignSchedulePieceRemovals signs a SchedulePieceRemovals operation via UCAN invocation
+func (c *Client) SignSchedulePieceRemovals(
+	ctx context.Context,
+	issuer ucan.Signer,
+	dataSet *big.Int,
+	pieceIds []*big.Int,
+	options ...delegation.Option,
+) (*eip712.AuthSignature, error) {
+	inv, err := sign.PiecesRemoveSchedule.Invoke(
+		issuer,
+		c.Connection.ID(),
+		c.Connection.ID().DID().String(),
+		sign.PiecesRemoveScheduleCaveats{
+			DataSet: dataSet,
+			Pieces:  pieceIds,
+		},
+		options...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("invoking %s: %w", sign.PiecesRemoveScheduleAbility, err)
 	}
-
-	req := types.SchedulePieceRemovalsRequest{
-		ClientDataSetId: clientDataSetId.String(),
-		PieceIds:        pieceIdsStr,
-	}
-
-	var sig eip712.AuthSignature
-	if err := c.post(ctx, "/sign/schedule-piece-removals", req, &sig); err != nil {
-		return nil, fmt.Errorf("signing schedule piece removals: %w", err)
-	}
-
-	return &sig, nil
+	return execInvocation(ctx, c.Connection, inv)
 }
 
-// SignDeleteDataSet signs a DeleteDataSet operation via HTTP
-func (c *Client) SignDeleteDataSet(ctx context.Context,
-	clientDataSetId *big.Int) (*eip712.AuthSignature, error) {
-
-	req := types.DeleteDataSetRequest{
-		ClientDataSetId: clientDataSetId.String(),
+// SignDeleteDataSet signs a DeleteDataSet operation via UCAN invocation
+func (c *Client) SignDeleteDataSet(
+	ctx context.Context,
+	issuer ucan.Signer,
+	dataSet *big.Int,
+	options ...delegation.Option,
+) (*eip712.AuthSignature, error) {
+	inv, err := sign.DataSetDelete.Invoke(
+		issuer,
+		c.Connection.ID(),
+		c.Connection.ID().DID().String(),
+		sign.DataSetDeleteCaveats{
+			DataSet: dataSet,
+		},
+		options...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("invoking %s: %w", sign.DataSetDeleteAbility, err)
 	}
-
-	var sig eip712.AuthSignature
-	if err := c.post(ctx, "/sign/delete-dataset", req, &sig); err != nil {
-		return nil, fmt.Errorf("signing delete dataset: %w", err)
-	}
-
-	return &sig, nil
+	return execInvocation(ctx, c.Connection, inv)
 }
 
-// post makes an HTTP POST request to the signing service
-func (c *Client) post(ctx context.Context, path string, reqBody interface{}, respBody interface{}) error {
-	// Marshal request body
-	jsonData, err := json.Marshal(reqBody)
+func execInvocation(ctx context.Context, conn client.Connection, inv invocation.Invocation) (*eip712.AuthSignature, error) {
+	xres, err := client.Execute(ctx, []invocation.Invocation{inv}, conn)
 	if err != nil {
-		return fmt.Errorf("marshaling request: %w", err)
+		return nil, fmt.Errorf("executing %s: %w", inv.Capabilities()[0].Can(), err)
 	}
-
-	// Create HTTP request
-	url := c.baseURL + path
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
+	rcptLink, ok := xres.Get(inv.Link())
+	if !ok {
+		return nil, fmt.Errorf("missing receipt for invocation: %s", inv.Link())
+	}
+	blocks, err := blockstore.NewBlockReader(blockstore.WithBlocksIterator(xres.Blocks()))
 	if err != nil {
-		return fmt.Errorf("creating request: %w", err)
+		return nil, fmt.Errorf("reading agent message blocks: %w", err)
 	}
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	// Make HTTP request
-	resp, err := c.httpClient.Do(httpReq)
+	rcpt, err := receipt.NewAnyReceipt(rcptLink, blocks)
 	if err != nil {
-		return fmt.Errorf("making request: %w", err)
+		return nil, fmt.Errorf("creating receipt: %w", err)
 	}
-	defer resp.Body.Close()
+	return result.MatchResultR2(
+		rcpt.Out(),
+		func(o ipld.Node) (*eip712.AuthSignature, error) {
+			sig, err := sign.AuthSignatureReader.Read(o)
+			if err != nil {
+				return nil, fmt.Errorf("reading signature: %w", err)
+			}
+			eipSig := eip712.AuthSignature(sig)
+			return &eipSig, nil
+		},
+		func(x ipld.Node) (*eip712.AuthSignature, error) {
+			signErr, err := sign.SignErrorReader.Read(x)
+			if err != nil {
+				return nil, fdm.Bind(x)
+			}
+			return nil, signErr
+		},
+	)
+}
 
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("reading response: %w", err)
+func fromEIP712MetadataEntries(entries []eip712.MetadataEntry) sign.Metadata {
+	meta := sign.Metadata{
+		Keys:   make([]string, 0, len(entries)),
+		Values: make(map[string]string, len(entries)),
 	}
-
-	// Check status code
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server returned status %d: %s", resp.StatusCode, string(body))
+	for _, e := range entries {
+		meta.Keys = append(meta.Keys, e.Key)
+		meta.Values[e.Key] = e.Value
 	}
-
-	// Unmarshal response
-	if err := json.Unmarshal(body, respBody); err != nil {
-		return fmt.Errorf("unmarshaling response: %w", err)
-	}
-
-	return nil
+	return meta
 }

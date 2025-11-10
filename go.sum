@@ -580,6 +580,8 @@ github.com/storacha/filecoin-services/go v0.0.0-20251014235258-8f809a722a94 h1:D
 github.com/storacha/filecoin-services/go v0.0.0-20251014235258-8f809a722a94/go.mod h1:defpuuds8wN2Ag2rJH/InaARxfY49LXsP7V+RjCYhUY=
 github.com/storacha/go-libstoracha v0.4.1-0.20251107151226-0e8b75401d9c h1:RGTIINiaCQ9RnfR9bBBfoXdACrvljA97aybBIPnqivs=
 github.com/storacha/go-libstoracha v0.4.1-0.20251107151226-0e8b75401d9c/go.mod h1:6BEPZN2kYpwOGhxuccsQfyqPjpLwer4tbMObmZ6CM5M=
+github.com/storacha/go-libstoracha v0.4.1-0.20251110152332-b66cf33c47c1 h1:c993qEby5vwuUa9WeIksQIaHKiAU700jweR9Udnjojc=
+github.com/storacha/go-libstoracha v0.4.1-0.20251110152332-b66cf33c47c1/go.mod h1:6BEPZN2kYpwOGhxuccsQfyqPjpLwer4tbMObmZ6CM5M=
 github.com/storacha/go-ucanto v0.7.1 h1:/KRsCltQt57+3sqNqM8ygh9TwA6+0DGC2LIYaOnhcSY=
 github.com/storacha/go-ucanto v0.7.1/go.mod h1:O35Ze4x18EWtz3ftRXXd/mTZ+b8OQVjYYrnadJ/xNjg=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

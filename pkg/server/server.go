@@ -8,12 +8,12 @@ import (
 	"github.com/storacha/go-ucanto/principal"
 	"github.com/storacha/go-ucanto/server"
 	"github.com/storacha/piri-signing-service/pkg/server/handlers"
-	"github.com/storacha/piri-signing-service/pkg/signer"
+	"github.com/storacha/piri-signing-service/pkg/types"
 )
 
 var log = logging.Logger("pkg/server")
 
-func New(id principal.Signer, signer *signer.Signer) (server.ServerView[server.Service], error) {
+func New(id principal.Signer, signer types.OperationSigner) (server.ServerView[server.Service], error) {
 	options := []server.Option{
 		server.WithServiceMethod(
 			sign.DataSetCreateAbility,

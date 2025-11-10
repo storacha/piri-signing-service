@@ -14,12 +14,12 @@ import (
 	"github.com/storacha/go-ucanto/principal"
 	"github.com/storacha/go-ucanto/server"
 	"github.com/storacha/go-ucanto/ucan"
-	"github.com/storacha/piri-signing-service/pkg/signer"
+	"github.com/storacha/piri-signing-service/pkg/types"
 )
 
 var log = logging.Logger("pkg/server/handlers")
 
-func NewDataSetCreateHandler(id principal.Signer, signer *signer.Signer) server.HandlerFunc[sign.DataSetCreateCaveats, sign.DataSetCreateOk, failure.IPLDBuilderFailure] {
+func NewDataSetCreateHandler(id principal.Signer, signer types.OperationSigner) server.HandlerFunc[sign.DataSetCreateCaveats, sign.DataSetCreateOk, failure.IPLDBuilderFailure] {
 	return func(
 		ctx context.Context,
 		capability ucan.Capability[sign.DataSetCreateCaveats],
@@ -51,7 +51,7 @@ func NewDataSetCreateHandler(id principal.Signer, signer *signer.Signer) server.
 	}
 }
 
-func NewDataSetDeleteHandler(id principal.Signer, signer *signer.Signer) server.HandlerFunc[sign.DataSetDeleteCaveats, sign.DataSetDeleteOk, failure.IPLDBuilderFailure] {
+func NewDataSetDeleteHandler(id principal.Signer, signer types.OperationSigner) server.HandlerFunc[sign.DataSetDeleteCaveats, sign.DataSetDeleteOk, failure.IPLDBuilderFailure] {
 	return func(
 		ctx context.Context,
 		capability ucan.Capability[sign.DataSetDeleteCaveats],
@@ -81,7 +81,7 @@ func NewDataSetDeleteHandler(id principal.Signer, signer *signer.Signer) server.
 	}
 }
 
-func NewPiecesAddHandler(id principal.Signer, signer *signer.Signer) server.HandlerFunc[sign.PiecesAddCaveats, sign.PiecesAddOk, failure.IPLDBuilderFailure] {
+func NewPiecesAddHandler(id principal.Signer, signer types.OperationSigner) server.HandlerFunc[sign.PiecesAddCaveats, sign.PiecesAddOk, failure.IPLDBuilderFailure] {
 	return func(
 		ctx context.Context,
 		capability ucan.Capability[sign.PiecesAddCaveats],
@@ -120,7 +120,7 @@ func NewPiecesAddHandler(id principal.Signer, signer *signer.Signer) server.Hand
 	}
 }
 
-func NewPiecesRemoveScheduleHandler(id principal.Signer, signer *signer.Signer) server.HandlerFunc[sign.PiecesRemoveScheduleCaveats, sign.PiecesRemoveScheduleOk, failure.IPLDBuilderFailure] {
+func NewPiecesRemoveScheduleHandler(id principal.Signer, signer types.OperationSigner) server.HandlerFunc[sign.PiecesRemoveScheduleCaveats, sign.PiecesRemoveScheduleOk, failure.IPLDBuilderFailure] {
 	return func(
 		ctx context.Context,
 		capability ucan.Capability[sign.PiecesRemoveScheduleCaveats],

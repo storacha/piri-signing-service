@@ -1,7 +1,6 @@
 package types
 
 import (
-	"context"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -41,32 +40,16 @@ type HealthResponse struct {
 }
 
 // SigningService defines the interface for PDP operation signing.
-// This can be implemented by:
-// - HTTP client (remote signing service)
-// - In-process signer (direct signer.Signer)
-//
-// This allows piri nodes to use either implementation interchangeably,
-// enabling easy testing and development without running a separate service.
-type SigningService interface {
+type OperationSigner interface {
 	// SignCreateDataSet signs a CreateDataSet operation
-	SignCreateDataSet(ctx context.Context,
-		clientDataSetId *big.Int,
-		payee common.Address,
-		metadata []eip712.MetadataEntry) (*eip712.AuthSignature, error)
+	SignCreateDataSet(dataSet *big.Int, payee common.Address, metadata []eip712.MetadataEntry) (*eip712.AuthSignature, error)
 
 	// SignAddPieces signs an AddPieces operation
-	SignAddPieces(ctx context.Context,
-		clientDataSetId *big.Int,
-		firstAdded *big.Int,
-		pieceData [][]byte,
-		metadata [][]eip712.MetadataEntry) (*eip712.AuthSignature, error)
+	SignAddPieces(dataSet *big.Int, firstAdded *big.Int, pieceData [][]byte, metadata [][]eip712.MetadataEntry) (*eip712.AuthSignature, error)
 
 	// SignSchedulePieceRemovals signs a SchedulePieceRemovals operation
-	SignSchedulePieceRemovals(ctx context.Context,
-		clientDataSetId *big.Int,
-		pieceIds []*big.Int) (*eip712.AuthSignature, error)
+	SignSchedulePieceRemovals(dataSet *big.Int, pieceIds []*big.Int) (*eip712.AuthSignature, error)
 
 	// SignDeleteDataSet signs a DeleteDataSet operation
-	SignDeleteDataSet(ctx context.Context,
-		clientDataSetId *big.Int) (*eip712.AuthSignature, error)
+	SignDeleteDataSet(dataSet *big.Int) (*eip712.AuthSignature, error)
 }
