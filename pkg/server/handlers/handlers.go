@@ -150,3 +150,12 @@ func NewPiecesRemoveScheduleHandler(id principal.Signer, signer *signer.Signer) 
 		return result.Ok[sign.PiecesRemoveScheduleOk, failure.IPLDBuilderFailure](sign.PiecesRemoveScheduleOk(*s)), nil, nil
 	}
 }
+
+func toEIP712MetadataEntries(m sign.Metadata) []eip712.MetadataEntry {
+	meta := make([]eip712.MetadataEntry, 0, len(m.Values))
+	for _, k := range m.Keys {
+		v := m.Values[k]
+		meta = append(meta, eip712.MetadataEntry{Key: k, Value: v})
+	}
+	return meta
+}
