@@ -67,7 +67,7 @@ func NewDataSetDeleteHandler(id principal.Signer, signer *signer.Signer) server.
 		)
 		// issuer must have a delegation to use the service (cannot be self signed)
 		if capability.With() != id.DID().String() {
-			return result.Error[sign.DataSetCreateOk, failure.IPLDBuilderFailure](
+			return result.Error[sign.DataSetDeleteOk, failure.IPLDBuilderFailure](
 				sign.NewInvalidResourceError(id.DID().String(), capability.With()),
 			), nil, nil
 		}
@@ -77,7 +77,7 @@ func NewDataSetDeleteHandler(id principal.Signer, signer *signer.Signer) server.
 			return nil, nil, fmt.Errorf("signing delete dataset: %w", err)
 		}
 
-		return result.Ok[sign.DataSetDeleteOk, failure.IPLDBuilderFailure](sign.DataSetCreateOk(*s)), nil, nil
+		return result.Ok[sign.DataSetDeleteOk, failure.IPLDBuilderFailure](sign.DataSetDeleteOk(*s)), nil, nil
 	}
 }
 
@@ -99,7 +99,7 @@ func NewPiecesAddHandler(id principal.Signer, signer *signer.Signer) server.Hand
 		)
 		// issuer must have a delegation to use the service (cannot be self signed)
 		if capability.With() != id.DID().String() {
-			return result.Error[sign.DataSetCreateOk, failure.IPLDBuilderFailure](
+			return result.Error[sign.PiecesAddOk, failure.IPLDBuilderFailure](
 				sign.NewInvalidResourceError(id.DID().String(), capability.With()),
 			), nil, nil
 		}
@@ -137,7 +137,7 @@ func NewPiecesRemoveScheduleHandler(id principal.Signer, signer *signer.Signer) 
 		)
 		// issuer must have a delegation to use the service (cannot be self signed)
 		if capability.With() != id.DID().String() {
-			return result.Error[sign.DataSetCreateOk, failure.IPLDBuilderFailure](
+			return result.Error[sign.PiecesRemoveScheduleOk, failure.IPLDBuilderFailure](
 				sign.NewInvalidResourceError(id.DID().String(), capability.With()),
 			), nil, nil
 		}

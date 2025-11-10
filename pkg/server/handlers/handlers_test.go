@@ -39,7 +39,7 @@ func TestSignCreateDataSet_Success(t *testing.T) {
 	service := testutil.WebService
 
 	s := createTestSigner(t)
-	handler := handlers.NewDataSetCreateHandler(testutil.WebService, s)
+	handler := handlers.NewDataSetCreateHandler(service, s)
 
 	// Use a valid checksummed address
 	testPayee := common.HexToAddress("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb")
