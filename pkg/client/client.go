@@ -22,23 +22,34 @@ import (
 	"github.com/storacha/go-ucanto/ucan"
 )
 
-// Client implements types.SigningService using HTTP calls to a remote signing service
+// Client uses UCAN invocations to request a remote signing service to sign PDP operations.
 type Client struct {
 	Connection client.Connection
 }
 
-// New creates a new client for the signing service.
-func New(serviceID ucan.Principal, serviceURL string) (*Client, error) {
-	return NewWithHTTPClient(serviceID, serviceURL, &http.Client{})
+type clientConfig struct {
+	httpClient *http.Client
 }
 
-// NewWithHTTPClient creates a new signing service client with a custom HTTP client.
-func NewWithHTTPClient(serviceID ucan.Principal, serviceURL string, httpClient *http.Client) (*Client, error) {
+type Option func(*clientConfig)
+
+func WithHTTPClient(client *http.Client) Option {
+	return func(c *clientConfig) {
+		c.httpClient = client
+	}
+}
+
+// New creates a new client for the signing service.
+func New(serviceID ucan.Principal, serviceURL string, options ...Option) (*Client, error) {
+	cfg := clientConfig{}
+	for _, opt := range options {
+		opt(&cfg)
+	}
 	endpoint, err := url.Parse(serviceURL)
 	if err != nil {
 		return nil, fmt.Errorf("parsing signing service URL: %w", err)
 	}
-	channel := ucan_http.NewChannel(endpoint, ucan_http.WithClient(httpClient))
+	channel := ucan_http.NewChannel(endpoint, ucan_http.WithClient(cfg.httpClient))
 	conn, err := client.NewConnection(serviceID, channel)
 	if err != nil {
 		return nil, fmt.Errorf("creating signing service connection: %w", err)
