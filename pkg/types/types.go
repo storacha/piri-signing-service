@@ -44,6 +44,12 @@ type HealthResponse struct {
 }
 
 // SigningService defines the interface for authorized PDP operation signing.
+// This can be implemented by:
+// - UCAN client (remote signing service)
+// - In-process signer (for testing/dev)
+//
+// This allows piri nodes to use either implementation interchangeably,
+// enabling easy testing and development without running a separate service.
 type SigningService interface {
 	// SignCreateDataSet signs a CreateDataSet operation
 	SignCreateDataSet(
