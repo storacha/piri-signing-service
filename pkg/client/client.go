@@ -20,12 +20,16 @@ import (
 	fdm "github.com/storacha/go-ucanto/core/result/failure/datamodel"
 	ucan_http "github.com/storacha/go-ucanto/transport/http"
 	"github.com/storacha/go-ucanto/ucan"
+	"github.com/storacha/piri-signing-service/pkg/types"
 )
 
 // Client uses UCAN invocations to request a remote signing service to sign PDP operations.
 type Client struct {
 	Connection client.Connection
 }
+
+// Verify that Client implements types.SigningService at compile time
+var _ types.SigningService = (*Client)(nil)
 
 type clientConfig struct {
 	httpClient *http.Client
