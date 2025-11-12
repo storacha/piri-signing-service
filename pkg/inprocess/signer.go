@@ -13,9 +13,9 @@ import (
 	"github.com/storacha/piri-signing-service/pkg/types"
 )
 
-// Signer implements types.SigningService using eip712.Signer directly.
-// This provides an in-process implementation that bypasses HTTP and network calls,
-// useful for testing and development.
+// Signer implements [types.SigningService] using eip712.Signer directly.
+// This provides an in-process implementation that bypasses network calls, and
+// authorization checks - useful for testing and development.
 type Signer struct {
 	signer *signer.Signer
 }
