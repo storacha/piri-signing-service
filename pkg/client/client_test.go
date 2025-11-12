@@ -49,7 +49,7 @@ func TestClient_SignCreateDataSet(t *testing.T) {
 	))
 	require.NoError(t, err)
 
-	client := Client{testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
+	client := Client{Connection: testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
 
 	dataSet := big.NewInt(12345)
 	payee := common.HexToAddress("0xabcdef1234567890abcdef1234567890abcdef12")
@@ -99,7 +99,7 @@ func TestClient_SignAddPieces(t *testing.T) {
 	))
 	require.NoError(t, err)
 
-	client := Client{testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
+	client := Client{Connection: testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
 
 	dataSet := big.NewInt(12345)
 	firstAdded := big.NewInt(0)
@@ -158,7 +158,7 @@ func TestClient_SignSchedulePieceRemovals(t *testing.T) {
 	))
 	require.NoError(t, err)
 
-	client := Client{testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
+	client := Client{Connection: testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
 
 	dataSet := big.NewInt(12345)
 	pieces := []*big.Int{
@@ -200,7 +200,7 @@ func TestClient_SignDeleteDataSet(t *testing.T) {
 	))
 	require.NoError(t, err)
 
-	client := Client{testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
+	client := Client{Connection: testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
 
 	dataSet := big.NewInt(12345)
 
@@ -232,7 +232,7 @@ func TestClient_ServerError(t *testing.T) {
 	))
 	require.NoError(t, err)
 
-	client := Client{testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
+	client := Client{Connection: testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
 
 	clientDataSetId := big.NewInt(12345)
 	payee := common.HexToAddress("0xabcdef1234567890abcdef1234567890abcdef12")
@@ -267,7 +267,7 @@ func TestClient_Unauthorized(t *testing.T) {
 	))
 	require.NoError(t, err)
 
-	client := Client{testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
+	client := Client{Connection: testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
 
 	clientDataSetId := big.NewInt(12345)
 	payee := common.HexToAddress("0xabcdef1234567890abcdef1234567890abcdef12")

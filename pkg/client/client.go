@@ -25,21 +25,32 @@ import (
 
 // Client uses UCAN invocations to request a remote signing service to sign PDP operations.
 type Client struct {
-	Connection client.Connection
+	Connection        client.Connection   // Connection to the service.
+	InvocationOptions []delegation.Option // Options added to every invocation.
 }
 
 // Verify that Client implements types.SigningService at compile time
 var _ types.SigningService = (*Client)(nil)
 
 type clientConfig struct {
-	httpClient *http.Client
+	httpClient        *http.Client
+	invocationOptions []delegation.Option
 }
 
 type Option func(*clientConfig)
 
+// WithHTTPClient configures a custom HTTP client.
 func WithHTTPClient(client *http.Client) Option {
 	return func(c *clientConfig) {
 		c.httpClient = client
+	}
+}
+
+// WithInvocationOptions configures invocation options that are sent with every
+// request.
+func WithInvocationOptions(opts ...delegation.Option) Option {
+	return func(c *clientConfig) {
+		c.invocationOptions = append(c.invocationOptions, opts...)
 	}
 }
 
@@ -58,7 +69,7 @@ func New(serviceID ucan.Principal, serviceURL string, options ...Option) (*Clien
 	if err != nil {
 		return nil, fmt.Errorf("creating signing service connection: %w", err)
 	}
-	return &Client{conn}, nil
+	return &Client{conn, cfg.invocationOptions}, nil
 }
 
 // SignCreateDataSet signs a CreateDataSet operation via UCAN invocation
@@ -70,6 +81,8 @@ func (c *Client) SignCreateDataSet(
 	metadata []eip712.MetadataEntry,
 	options ...delegation.Option,
 ) (*eip712.AuthSignature, error) {
+	var opts []delegation.Option
+	opts = append(append(opts, c.InvocationOptions...), options...)
 	inv, err := sign.DataSetCreate.Invoke(
 		issuer,
 		c.Connection.ID(),
@@ -79,7 +92,7 @@ func (c *Client) SignCreateDataSet(
 			Payee:    payee,
 			Metadata: fromEIP712MetadataEntries(metadata),
 		},
-		options...,
+		opts...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("invoking %s: %w", sign.DataSetCreateAbility, err)
@@ -112,6 +125,8 @@ func (c *Client) SignAddPieces(
 		metaModel = append(metaModel, fromEIP712MetadataEntries(m))
 	}
 
+	var opts []delegation.Option
+	opts = append(append(opts, c.InvocationOptions...), options...)
 	inv, err := sign.PiecesAdd.Invoke(
 		issuer,
 		c.Connection.ID(),
@@ -123,7 +138,7 @@ func (c *Client) SignAddPieces(
 			Metadata:   metaModel,
 			Proofs:     proofLinks,
 		},
-		options...,
+		opts...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("invoking %s: %w", sign.PiecesAddAbility, err)
@@ -153,6 +168,8 @@ func (c *Client) SignSchedulePieceRemovals(
 	pieceIds []*big.Int,
 	options ...delegation.Option,
 ) (*eip712.AuthSignature, error) {
+	var opts []delegation.Option
+	opts = append(append(opts, c.InvocationOptions...), options...)
 	inv, err := sign.PiecesRemoveSchedule.Invoke(
 		issuer,
 		c.Connection.ID(),
@@ -161,7 +178,7 @@ func (c *Client) SignSchedulePieceRemovals(
 			DataSet: dataSet,
 			Pieces:  pieceIds,
 		},
-		options...,
+		opts...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("invoking %s: %w", sign.PiecesRemoveScheduleAbility, err)
@@ -176,6 +193,8 @@ func (c *Client) SignDeleteDataSet(
 	dataSet *big.Int,
 	options ...delegation.Option,
 ) (*eip712.AuthSignature, error) {
+	var opts []delegation.Option
+	opts = append(append(opts, c.InvocationOptions...), options...)
 	inv, err := sign.DataSetDelete.Invoke(
 		issuer,
 		c.Connection.ID(),
@@ -183,7 +202,7 @@ func (c *Client) SignDeleteDataSet(
 		sign.DataSetDeleteCaveats{
 			DataSet: dataSet,
 		},
-		options...,
+		opts...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("invoking %s: %w", sign.DataSetDeleteAbility, err)
