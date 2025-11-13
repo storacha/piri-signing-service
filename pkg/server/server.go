@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	logging "github.com/ipfs/go-log/v2"
+	"github.com/storacha/go-libstoracha/capabilities/access"
 	"github.com/storacha/go-libstoracha/capabilities/pdp/sign"
 	"github.com/storacha/go-ucanto/principal"
 	"github.com/storacha/go-ucanto/server"
@@ -15,6 +16,10 @@ var log = logging.Logger("pkg/server")
 
 func New(id principal.Signer, signer types.OperationSigner) (server.ServerView[server.Service], error) {
 	options := []server.Option{
+		server.WithServiceMethod(
+			access.GrantAbility,
+			server.Provide(access.Grant, handlers.NewAccessGrantHandler(id)),
+		),
 		server.WithServiceMethod(
 			sign.DataSetCreateAbility,
 			server.Provide(sign.DataSetCreate, handlers.NewDataSetCreateHandler(id, signer)),
