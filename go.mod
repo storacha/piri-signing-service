@@ -1,6 +1,6 @@
 module github.com/storacha/piri-signing-service
 
-go 1.24.6
+go 1.25.3
 
 require (
 	github.com/ethereum/go-ethereum v1.16.4
@@ -8,7 +8,7 @@ require (
 	github.com/labstack/gommon v0.4.2
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.21.0
-	github.com/storacha/filecoin-services/go v0.0.0-20251014235258-8f809a722a94
+	github.com/storacha/filecoin-services/go v0.0.2
 	github.com/storacha/go-ucanto v0.6.6
 	github.com/stretchr/testify v1.11.1
 )
