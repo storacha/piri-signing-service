@@ -6,6 +6,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/storacha/filecoin-services/go/eip712"
+	"github.com/storacha/go-ucanto/core/delegation"
+	"github.com/storacha/go-ucanto/core/receipt"
+	"github.com/storacha/go-ucanto/ucan"
 )
 
 // CreateDataSetRequest represents the request payload for creating a dataset
@@ -40,33 +43,65 @@ type HealthResponse struct {
 	Signer string `json:"signer"`
 }
 
-// SigningService defines the interface for PDP operation signing.
+// SigningService defines the interface for authorized PDP operation signing.
 // This can be implemented by:
-// - HTTP client (remote signing service)
-// - In-process signer (direct signer.Signer)
+// - UCAN client (remote signing service)
+// - In-process signer (for testing/dev)
 //
 // This allows piri nodes to use either implementation interchangeably,
 // enabling easy testing and development without running a separate service.
 type SigningService interface {
 	// SignCreateDataSet signs a CreateDataSet operation
-	SignCreateDataSet(ctx context.Context,
-		clientDataSetId *big.Int,
+	SignCreateDataSet(
+		ctx context.Context,
+		issuer ucan.Signer,
+		dataSet *big.Int,
 		payee common.Address,
-		metadata []eip712.MetadataEntry) (*eip712.AuthSignature, error)
+		metadata []eip712.MetadataEntry,
+		options ...delegation.Option,
+	) (*eip712.AuthSignature, error)
 
 	// SignAddPieces signs an AddPieces operation
-	SignAddPieces(ctx context.Context,
-		clientDataSetId *big.Int,
+	SignAddPieces(
+		ctx context.Context,
+		issuer ucan.Signer,
+		dataSet *big.Int,
 		firstAdded *big.Int,
 		pieceData [][]byte,
-		metadata [][]eip712.MetadataEntry) (*eip712.AuthSignature, error)
+		metadata [][]eip712.MetadataEntry,
+		proofs [][]receipt.AnyReceipt,
+		options ...delegation.Option,
+	) (*eip712.AuthSignature, error)
 
 	// SignSchedulePieceRemovals signs a SchedulePieceRemovals operation
-	SignSchedulePieceRemovals(ctx context.Context,
-		clientDataSetId *big.Int,
-		pieceIds []*big.Int) (*eip712.AuthSignature, error)
+	SignSchedulePieceRemovals(
+		ctx context.Context,
+		issuer ucan.Signer,
+		dataSet *big.Int,
+		pieceIds []*big.Int,
+		options ...delegation.Option,
+	) (*eip712.AuthSignature, error)
 
 	// SignDeleteDataSet signs a DeleteDataSet operation
-	SignDeleteDataSet(ctx context.Context,
-		clientDataSetId *big.Int) (*eip712.AuthSignature, error)
+	SignDeleteDataSet(
+		ctx context.Context,
+		issuer ucan.Signer,
+		dataSet *big.Int,
+		options ...delegation.Option,
+	) (*eip712.AuthSignature, error)
+}
+
+// OperationSigner defines the interface for PDP operation signing.
+type OperationSigner interface {
+	// SignCreateDataSet signs a CreateDataSet operation
+	SignCreateDataSet(dataSet *big.Int, payee common.Address, metadata []eip712.MetadataEntry) (*eip712.AuthSignature, error)
+
+	// SignAddPieces signs an AddPieces operation
+	SignAddPieces(dataSet *big.Int, firstAdded *big.Int, pieceData [][]byte, metadata [][]eip712.MetadataEntry) (*eip712.AuthSignature, error)
+
+	// SignSchedulePieceRemovals signs a SchedulePieceRemovals operation
+	SignSchedulePieceRemovals(dataSet *big.Int, pieceIds []*big.Int) (*eip712.AuthSignature, error)
+
+	// SignDeleteDataSet signs a DeleteDataSet operation
+	SignDeleteDataSet(dataSet *big.Int) (*eip712.AuthSignature, error)
 }

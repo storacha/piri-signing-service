@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/storacha/filecoin-services/go/eip712"
+	"github.com/storacha/go-libstoracha/testutil"
 	"github.com/storacha/piri-signing-service/pkg/signer"
 	"github.com/storacha/piri-signing-service/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -52,7 +53,7 @@ func TestSigner_SignCreateDataSet(t *testing.T) {
 		{Key: "test-key", Value: "test-value"},
 	}
 
-	signature, err := signer.SignCreateDataSet(ctx, clientDataSetId, payee, metadata)
+	signature, err := signer.SignCreateDataSet(ctx, testutil.Alice, clientDataSetId, payee, metadata)
 	require.NoError(t, err)
 	assert.NotNil(t, signature)
 
@@ -81,7 +82,7 @@ func TestSigner_SignAddPieces(t *testing.T) {
 		{{Key: "piece2-key", Value: "piece2-value"}},
 	}
 
-	signature, err := signer.SignAddPieces(ctx, clientDataSetId, firstAdded, pieceData, metadata)
+	signature, err := signer.SignAddPieces(ctx, testutil.Alice, clientDataSetId, firstAdded, pieceData, metadata, nil)
 	require.NoError(t, err)
 	assert.NotNil(t, signature)
 
@@ -106,7 +107,7 @@ func TestSigner_SignSchedulePieceRemovals(t *testing.T) {
 		big.NewInt(3),
 	}
 
-	signature, err := signer.SignSchedulePieceRemovals(ctx, clientDataSetId, pieceIds)
+	signature, err := signer.SignSchedulePieceRemovals(ctx, testutil.Alice, clientDataSetId, pieceIds)
 	require.NoError(t, err)
 	assert.NotNil(t, signature)
 
@@ -126,7 +127,7 @@ func TestSigner_SignDeleteDataSet(t *testing.T) {
 
 	clientDataSetId := big.NewInt(12345)
 
-	signature, err := signer.SignDeleteDataSet(ctx, clientDataSetId)
+	signature, err := signer.SignDeleteDataSet(ctx, testutil.Alice, clientDataSetId)
 	require.NoError(t, err)
 	assert.NotNil(t, signature)
 
@@ -151,10 +152,10 @@ func TestSigner_SignatureConsistency(t *testing.T) {
 	}
 
 	// Sign the same data twice
-	sig1, err := signer.SignCreateDataSet(ctx, clientDataSetId, payee, metadata)
+	sig1, err := signer.SignCreateDataSet(ctx, testutil.Alice, clientDataSetId, payee, metadata)
 	require.NoError(t, err)
 
-	sig2, err := signer.SignCreateDataSet(ctx, clientDataSetId, payee, metadata)
+	sig2, err := signer.SignCreateDataSet(ctx, testutil.Alice, clientDataSetId, payee, metadata)
 	require.NoError(t, err)
 
 	// Signatures should be identical for the same input
