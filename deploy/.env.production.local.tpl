@@ -1,5 +1,5 @@
 <%
-if [ "$TF_WORKSPACE" == "prod" ]; then
+if [ "$TF_WORKSPACE" == "forge-prod" ]; then
   SIGNING_SERVICE_RPC_URL="https://api.node.glif.io/rpc/v1"
   SIGNING_SERVICE_SERVICE_CONTRACT_ADDRESS="0xB9753937D3Bc1416f7d741d75b1671A1edb3e10A"
 else
