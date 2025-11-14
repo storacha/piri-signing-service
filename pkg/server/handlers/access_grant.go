@@ -32,7 +32,7 @@ func NewAccessGrantHandler(id principal.Signer) server.HandlerFunc[access.GrantC
 		nb := cap.Nb()
 		log.Infow(
 			"handling access request",
-			"ability", access.Grant,
+			"ability", access.GrantAbility,
 			"issuer", inv.Issuer().DID(),
 			"capabilities", nb.Att,
 			"cause", nb.Cause,
