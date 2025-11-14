@@ -16,8 +16,10 @@ import (
 	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	ucan_http "github.com/storacha/go-ucanto/transport/http"
 	"github.com/storacha/piri-signing-service/pkg/config"
 	"github.com/storacha/piri-signing-service/pkg/handlers"
+	"github.com/storacha/piri-signing-service/pkg/server"
 	"github.com/storacha/piri-signing-service/pkg/signer"
 )
 
@@ -81,14 +83,11 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("loading configuration: %w", err)
 	}
 
-	// TODO(vic): leaving this here for future use when we implement UCAN authentication
 	// Load service identity
-	// if cfg.ServiceKey != "" {
-	// 	id, err := config.LoadServiceIdentity(cfg.ServiceKey, cfg.DID)
-	// 	if err != nil {
-	// 		return fmt.Errorf("loading service identity: %w", err)
-	// 	}
-	// }
+	id, err := config.LoadServiceIdentity(cfg.ServiceKey, cfg.ServiceDID)
+	if err != nil {
+		return fmt.Errorf("loading service identity: %w", err)
+	}
 
 	// Load private signing key
 	var signingKey *ecdsa.PrivateKey
@@ -138,8 +137,29 @@ func run(cmd *cobra.Command, args []string) error {
 	// Create HTTP handlers
 	handler := handlers.NewHandler(s)
 
+	// Create UCAN server
+	server, err := server.New(id, s)
+	if err != nil {
+		return fmt.Errorf("creating UCAN server: %w", err)
+	}
+
 	// Setup routes
+	e.POST("/", func(ctx echo.Context) error {
+		r := ctx.Request()
+		res, err := server.Request(r.Context(), ucan_http.NewRequest(r.Body, r.Header))
+		if err != nil {
+			return fmt.Errorf("handling UCAN request: %w", err)
+		}
+		for key, vals := range res.Headers() {
+			for _, v := range vals {
+				ctx.Response().Header().Add(key, v)
+			}
+		}
+		// content type is empty as it will have been set by ucanto transport codec
+		return ctx.Stream(res.Status(), "", res.Body())
+	})
 	e.GET("/healthcheck", handler.Health)
+	// TODO: remove /sign/* routes after all nodes transition to UCAN invocations
 	e.POST("/sign/create-dataset", handler.SignCreateDataSet)
 	e.POST("/sign/add-pieces", handler.SignAddPieces)
 	e.POST("/sign/schedule-piece-removals", handler.SignSchedulePieceRemovals)
@@ -147,12 +167,12 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Log startup info
 	cmd.Println("Signing service starting...")
+	cmd.Printf("  Service ID: %s\n", id.DID())
 	cmd.Printf("  Signer address: %s\n", s.GetAddress().Hex())
 	cmd.Printf("  Chain ID: %s\n", chainID.String())
 	cmd.Printf("  Verifying contract: %s\n", cfg.ServiceContractAddress)
 	cmd.Printf("  Host: %s\n", cfg.Host)
 	cmd.Printf("  Port: %d\n", cfg.Port)
-	cmd.Println("⚠️  WARNING: This service blindly signs any request (no authentication)")
 
 	// Start server in goroutine
 	go func() {

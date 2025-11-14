@@ -2,69 +2,69 @@ package client
 
 import (
 	"context"
-	"encoding/hex"
-	"encoding/json"
+	"errors"
 	"math/big"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/storacha/filecoin-services/go/eip712"
-	"github.com/storacha/piri-signing-service/pkg/types"
+	"github.com/storacha/go-libstoracha/capabilities/pdp/sign"
+	"github.com/storacha/go-libstoracha/testutil"
+	"github.com/storacha/go-ucanto/client"
+	"github.com/storacha/go-ucanto/core/delegation"
+	"github.com/storacha/go-ucanto/core/invocation"
+	"github.com/storacha/go-ucanto/core/receipt"
+	"github.com/storacha/go-ucanto/core/receipt/fx"
+	"github.com/storacha/go-ucanto/core/receipt/ran"
+	"github.com/storacha/go-ucanto/core/result"
+	"github.com/storacha/go-ucanto/core/result/failure"
+	"github.com/storacha/go-ucanto/core/result/ok"
+	"github.com/storacha/go-ucanto/server"
+	"github.com/storacha/go-ucanto/ucan"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestClient_ImplementsInterface(t *testing.T) {
-	client := New("http://localhost:8080")
-
-	// Verify the client implements types.SigningService
-	var _ types.SigningService = client
-}
-
 func TestClient_SignCreateDataSet(t *testing.T) {
-	// Create a mock signature to return
-	mockSignature := &eip712.AuthSignature{
-		Signer: common.HexToAddress("0x1234567890123456789012345678901234567890"),
-		R:      common.BigToHash(big.NewInt(12345)),
-		S:      common.BigToHash(big.NewInt(67890)),
-		V:      27,
-	}
+	mockSignature := mockSignature()
 
-	// Create a test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/sign/create-dataset", r.URL.Path)
-		assert.Equal(t, "POST", r.Method)
-		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+	server, err := server.NewServer(testutil.WebService, server.WithServiceMethod(
+		sign.DataSetCreateAbility,
+		server.Provide(
+			sign.DataSetCreate,
+			func(
+				ctx context.Context,
+				capability ucan.Capability[sign.DataSetCreateCaveats],
+				invocation invocation.Invocation,
+				context server.InvocationContext,
+			) (result.Result[sign.DataSetCreateOk, failure.IPLDBuilderFailure], fx.Effects, error) {
+				req := capability.Nb()
+				assert.Equal(t, "12345", req.DataSet.String())
+				assert.Equal(t, "0xabCDEF1234567890ABcDEF1234567890aBCDeF12", req.Payee.String())
+				assert.Len(t, req.Metadata.Keys, 1)
+				assert.Equal(t, "test-key", req.Metadata.Keys[0])
+				return result.Ok[sign.DataSetCreateOk, failure.IPLDBuilderFailure](sign.DataSetCreateOk(*mockSignature)), nil, nil
+			},
+		),
+	))
+	require.NoError(t, err)
 
-		// Decode the request
-		var req types.CreateDataSetRequest
-		err := json.NewDecoder(r.Body).Decode(&req)
-		require.NoError(t, err)
+	client := Client{Connection: testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
 
-		assert.Equal(t, "12345", req.ClientDataSetId)
-		assert.Equal(t, "0xabCDEF1234567890ABcDEF1234567890aBCDeF12", req.Payee)
-		assert.Len(t, req.Metadata, 1)
-		assert.Equal(t, "test-key", req.Metadata[0].Key)
-
-		// Return the mock signature
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockSignature)
-	}))
-	defer server.Close()
-
-	// Create client
-	client := New(server.URL)
-	ctx := context.Background()
-
-	clientDataSetId := big.NewInt(12345)
+	dataSet := big.NewInt(12345)
 	payee := common.HexToAddress("0xabcdef1234567890abcdef1234567890abcdef12")
 	metadata := []eip712.MetadataEntry{
 		{Key: "test-key", Value: "test-value"},
 	}
 
-	signature, err := client.SignCreateDataSet(ctx, clientDataSetId, payee, metadata)
+	signature, err := client.SignCreateDataSet(
+		t.Context(),
+		testutil.Alice,
+		dataSet,
+		payee,
+		metadata,
+		delegation.WithProof(delegation.FromDelegation(mkproof(t))),
+	)
 	require.NoError(t, err)
 	assert.NotNil(t, signature)
 	assert.Equal(t, mockSignature.Signer, signature.Signer)
@@ -74,44 +74,34 @@ func TestClient_SignCreateDataSet(t *testing.T) {
 }
 
 func TestClient_SignAddPieces(t *testing.T) {
-	// Create a mock signature to return
-	mockSignature := &eip712.AuthSignature{
-		Signer: common.HexToAddress("0x1234567890123456789012345678901234567890"),
-		R:      common.BigToHash(big.NewInt(12345)),
-		S:      common.BigToHash(big.NewInt(67890)),
-		V:      27,
-	}
+	mockSignature := mockSignature()
 
-	// Create a test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/sign/add-pieces", r.URL.Path)
-		assert.Equal(t, "POST", r.Method)
+	server, err := server.NewServer(testutil.WebService, server.WithServiceMethod(
+		sign.PiecesAddAbility,
+		server.Provide(
+			sign.PiecesAdd,
+			func(
+				ctx context.Context,
+				capability ucan.Capability[sign.PiecesAddCaveats],
+				invocation invocation.Invocation,
+				context server.InvocationContext,
+			) (result.Result[sign.PiecesAddOk, failure.IPLDBuilderFailure], fx.Effects, error) {
+				req := capability.Nb()
+				assert.Equal(t, "12345", req.DataSet.String())
+				assert.Equal(t, "0", req.FirstAdded.String())
+				assert.Len(t, req.PieceData, 2)
+				assert.Equal(t, []byte("piece1"), req.PieceData[0])
+				assert.Len(t, req.Proofs, 1)
+				assert.Len(t, req.Proofs[0], 1)
+				return result.Ok[sign.PiecesAddOk, failure.IPLDBuilderFailure](sign.PiecesAddOk(*mockSignature)), nil, nil
+			},
+		),
+	))
+	require.NoError(t, err)
 
-		// Decode the request
-		var req types.AddPiecesRequest
-		err := json.NewDecoder(r.Body).Decode(&req)
-		require.NoError(t, err)
+	client := Client{Connection: testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
 
-		assert.Equal(t, "12345", req.ClientDataSetId)
-		assert.Equal(t, "0", req.FirstAdded)
-		assert.Len(t, req.PieceData, 2)
-
-		// Verify hex-encoded piece data
-		piece1, err := hex.DecodeString(req.PieceData[0])
-		require.NoError(t, err)
-		assert.Equal(t, []byte("piece1"), piece1)
-
-		// Return the mock signature
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockSignature)
-	}))
-	defer server.Close()
-
-	// Create client
-	client := New(server.URL)
-	ctx := context.Background()
-
-	clientDataSetId := big.NewInt(12345)
+	dataSet := big.NewInt(12345)
 	firstAdded := big.NewInt(0)
 	pieceData := [][]byte{
 		[]byte("piece1"),
@@ -121,155 +111,196 @@ func TestClient_SignAddPieces(t *testing.T) {
 		{{Key: "piece1-key", Value: "piece1-value"}},
 		{{Key: "piece2-key", Value: "piece2-value"}},
 	}
+	rcpt, err := receipt.Issue(
+		testutil.Alice,
+		result.Ok[ok.Unit, failure.IPLDBuilderFailure](ok.Unit{}),
+		ran.FromLink(testutil.RandomCID(t)),
+	)
+	require.NoError(t, err)
 
-	signature, err := client.SignAddPieces(ctx, clientDataSetId, firstAdded, pieceData, metadata)
+	signature, err := client.SignAddPieces(
+		t.Context(),
+		testutil.Alice,
+		dataSet,
+		firstAdded,
+		pieceData,
+		metadata,
+		[][]receipt.AnyReceipt{{rcpt}},
+		delegation.WithProof(delegation.FromDelegation(mkproof(t))),
+	)
 	require.NoError(t, err)
 	assert.NotNil(t, signature)
 	assert.Equal(t, mockSignature.Signer, signature.Signer)
 }
 
 func TestClient_SignSchedulePieceRemovals(t *testing.T) {
-	// Create a mock signature to return
-	mockSignature := &eip712.AuthSignature{
-		Signer: common.HexToAddress("0x1234567890123456789012345678901234567890"),
-		R:      common.BigToHash(big.NewInt(12345)),
-		S:      common.BigToHash(big.NewInt(67890)),
-		V:      27,
-	}
+	mockSignature := mockSignature()
 
-	// Create a test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/sign/schedule-piece-removals", r.URL.Path)
-		assert.Equal(t, "POST", r.Method)
+	server, err := server.NewServer(testutil.WebService, server.WithServiceMethod(
+		sign.PiecesRemoveScheduleAbility,
+		server.Provide(
+			sign.PiecesRemoveSchedule,
+			func(
+				ctx context.Context,
+				capability ucan.Capability[sign.PiecesRemoveScheduleCaveats],
+				invocation invocation.Invocation,
+				context server.InvocationContext,
+			) (result.Result[sign.PiecesRemoveScheduleOk, failure.IPLDBuilderFailure], fx.Effects, error) {
+				req := capability.Nb()
+				assert.Equal(t, "12345", req.DataSet.String())
+				assert.Len(t, req.Pieces, 3)
+				assert.Equal(t, "1", req.Pieces[0].String())
+				assert.Equal(t, "2", req.Pieces[1].String())
+				assert.Equal(t, "3", req.Pieces[2].String())
+				return result.Ok[sign.PiecesRemoveScheduleOk, failure.IPLDBuilderFailure](sign.PiecesRemoveScheduleOk(*mockSignature)), nil, nil
+			},
+		),
+	))
+	require.NoError(t, err)
 
-		// Decode the request
-		var req types.SchedulePieceRemovalsRequest
-		err := json.NewDecoder(r.Body).Decode(&req)
-		require.NoError(t, err)
+	client := Client{Connection: testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
 
-		assert.Equal(t, "12345", req.ClientDataSetId)
-		assert.Len(t, req.PieceIds, 3)
-		assert.Equal(t, "1", req.PieceIds[0])
-		assert.Equal(t, "2", req.PieceIds[1])
-		assert.Equal(t, "3", req.PieceIds[2])
-
-		// Return the mock signature
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockSignature)
-	}))
-	defer server.Close()
-
-	// Create client
-	client := New(server.URL)
-	ctx := context.Background()
-
-	clientDataSetId := big.NewInt(12345)
-	pieceIds := []*big.Int{
+	dataSet := big.NewInt(12345)
+	pieces := []*big.Int{
 		big.NewInt(1),
 		big.NewInt(2),
 		big.NewInt(3),
 	}
 
-	signature, err := client.SignSchedulePieceRemovals(ctx, clientDataSetId, pieceIds)
+	signature, err := client.SignSchedulePieceRemovals(
+		t.Context(),
+		testutil.Alice,
+		dataSet,
+		pieces,
+		delegation.WithProof(delegation.FromDelegation(mkproof(t))),
+	)
 	require.NoError(t, err)
 	assert.NotNil(t, signature)
 	assert.Equal(t, mockSignature.Signer, signature.Signer)
 }
 
 func TestClient_SignDeleteDataSet(t *testing.T) {
-	// Create a mock signature to return
-	mockSignature := &eip712.AuthSignature{
-		Signer: common.HexToAddress("0x1234567890123456789012345678901234567890"),
-		R:      common.BigToHash(big.NewInt(12345)),
-		S:      common.BigToHash(big.NewInt(67890)),
-		V:      27,
-	}
+	mockSignature := mockSignature()
 
-	// Create a test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/sign/delete-dataset", r.URL.Path)
-		assert.Equal(t, "POST", r.Method)
+	server, err := server.NewServer(testutil.WebService, server.WithServiceMethod(
+		sign.DataSetDeleteAbility,
+		server.Provide(
+			sign.DataSetDelete,
+			func(
+				ctx context.Context,
+				capability ucan.Capability[sign.DataSetDeleteCaveats],
+				invocation invocation.Invocation,
+				context server.InvocationContext,
+			) (result.Result[sign.DataSetDeleteOk, failure.IPLDBuilderFailure], fx.Effects, error) {
+				req := capability.Nb()
+				assert.Equal(t, "12345", req.DataSet.String())
+				return result.Ok[sign.DataSetDeleteOk, failure.IPLDBuilderFailure](sign.DataSetDeleteOk(*mockSignature)), nil, nil
+			},
+		),
+	))
+	require.NoError(t, err)
 
-		// Decode the request
-		var req types.DeleteDataSetRequest
-		err := json.NewDecoder(r.Body).Decode(&req)
-		require.NoError(t, err)
+	client := Client{Connection: testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
 
-		assert.Equal(t, "12345", req.ClientDataSetId)
+	dataSet := big.NewInt(12345)
 
-		// Return the mock signature
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockSignature)
-	}))
-	defer server.Close()
-
-	// Create client
-	client := New(server.URL)
-	ctx := context.Background()
-
-	clientDataSetId := big.NewInt(12345)
-
-	signature, err := client.SignDeleteDataSet(ctx, clientDataSetId)
+	signature, err := client.SignDeleteDataSet(
+		t.Context(),
+		testutil.Alice,
+		dataSet,
+		delegation.WithProof(delegation.FromDelegation(mkproof(t))),
+	)
 	require.NoError(t, err)
 	assert.NotNil(t, signature)
 	assert.Equal(t, mockSignature.Signer, signature.Signer)
 }
 
 func TestClient_ServerError(t *testing.T) {
-	// Create a test server that returns an error
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
-	}))
-	defer server.Close()
+	server, err := server.NewServer(testutil.WebService, server.WithServiceMethod(
+		sign.DataSetCreateAbility,
+		server.Provide(
+			sign.DataSetCreate,
+			func(
+				ctx context.Context,
+				capability ucan.Capability[sign.DataSetCreateCaveats],
+				invocation invocation.Invocation,
+				context server.InvocationContext,
+			) (result.Result[sign.DataSetCreateOk, failure.IPLDBuilderFailure], fx.Effects, error) {
+				return nil, nil, errors.New("boom")
+			},
+		),
+	))
+	require.NoError(t, err)
 
-	// Create client
-	client := New(server.URL)
-	ctx := context.Background()
-
-	clientDataSetId := big.NewInt(12345)
-	payee := common.HexToAddress("0xabcdef1234567890abcdef1234567890abcdef12")
-	metadata := []eip712.MetadataEntry{}
-
-	_, err := client.SignCreateDataSet(ctx, clientDataSetId, payee, metadata)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "server returned status 500")
-}
-
-func TestClient_NetworkError(t *testing.T) {
-	// Create client with invalid URL
-	client := New("http://localhost:99999") // Port that should not be in use
-	ctx := context.Background()
+	client := Client{Connection: testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
 
 	clientDataSetId := big.NewInt(12345)
 	payee := common.HexToAddress("0xabcdef1234567890abcdef1234567890abcdef12")
 	metadata := []eip712.MetadataEntry{}
 
-	_, err := client.SignCreateDataSet(ctx, clientDataSetId, payee, metadata)
+	_, err = client.SignCreateDataSet(
+		t.Context(),
+		testutil.Alice,
+		clientDataSetId,
+		payee,
+		metadata,
+		delegation.WithProof(delegation.FromDelegation(mkproof(t))),
+	)
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "boom")
 }
 
-func TestClient_CustomHTTPClient(t *testing.T) {
-	// Create a custom HTTP client with a transport that always returns success
-	mockTransport := &mockRoundTripper{
-		response: &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       http.NoBody,
-			Header:     make(http.Header),
-		},
+func TestClient_Unauthorized(t *testing.T) {
+	server, err := server.NewServer(testutil.WebService, server.WithServiceMethod(
+		sign.DataSetCreateAbility,
+		server.Provide(
+			sign.DataSetCreate,
+			func(
+				ctx context.Context,
+				capability ucan.Capability[sign.DataSetCreateCaveats],
+				invocation invocation.Invocation,
+				context server.InvocationContext,
+			) (result.Result[sign.DataSetCreateOk, failure.IPLDBuilderFailure], fx.Effects, error) {
+				return nil, nil, errors.New("boom")
+			},
+		),
+	))
+	require.NoError(t, err)
+
+	client := Client{Connection: testutil.Must(client.NewConnection(testutil.WebService, server))(t)}
+
+	clientDataSetId := big.NewInt(12345)
+	payee := common.HexToAddress("0xabcdef1234567890abcdef1234567890abcdef12")
+	metadata := []eip712.MetadataEntry{}
+
+	_, err = client.SignCreateDataSet(
+		t.Context(),
+		testutil.Alice,
+		clientDataSetId,
+		payee,
+		metadata,
+	)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not authorized")
+}
+
+func mkproof(t *testing.T) delegation.Delegation {
+	return testutil.Must(
+		delegation.Delegate(
+			testutil.WebService,
+			testutil.Alice,
+			[]ucan.Capability[ucan.NoCaveats]{
+				ucan.NewCapability("pdp/sign/*", testutil.WebService.DID().String(), ucan.NoCaveats{}),
+			},
+		),
+	)(t)
+}
+
+func mockSignature() *eip712.AuthSignature {
+	return &eip712.AuthSignature{
+		Signer: common.HexToAddress("0x1234567890123456789012345678901234567890"),
+		R:      common.BigToHash(big.NewInt(12345)),
+		S:      common.BigToHash(big.NewInt(67890)),
+		V:      27,
 	}
-	customClient := &http.Client{Transport: mockTransport}
-
-	client := NewWithHTTPClient("http://test.com", customClient)
-	assert.NotNil(t, client)
-	assert.Equal(t, customClient, client.httpClient)
-}
-
-// mockRoundTripper is a mock HTTP transport for testing
-type mockRoundTripper struct {
-	response *http.Response
-}
-
-func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	return m.response, nil
 }
