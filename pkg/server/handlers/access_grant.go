@@ -37,17 +37,19 @@ func NewAccessGrantHandler(id principal.Signer) server.HandlerFunc[access.GrantC
 			"capabilities", nb.Att,
 			"cause", nb.Cause,
 		)
+		if len(nb.Att) == 0 {
+			return result.Error[access.GrantOk, failure.IPLDBuilderFailure](access.NewMissingCapabilityError()), nil, nil
+		}
 		var cause invocation.Invocation
 		if cap.Nb().Cause != nil {
 			bs, err := blockstore.NewBlockReader(blockstore.WithBlocksIterator(inv.Blocks()))
 			if err != nil {
 				return nil, nil, fmt.Errorf("reading invocation blocks: %w", err)
 			}
-			i, err := invocation.NewInvocationView(cap.Nb().Cause, bs)
+			cause, err = invocation.NewInvocationView(cap.Nb().Cause, bs)
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating cause invocation: %w", err)
 			}
-			cause = i
 		}
 
 		delegations := map[string]delegation.Delegation{}
