@@ -91,7 +91,7 @@ func (s *Signer) RecoverCreateDataSetSigner(clientDataSetId *big.Int, payee comm
 	return crypto.PubkeyToAddress(*pubKey), nil
 }
 
-func (s *Signer) SignAddPieces(clientDataSetId, firstAdded *big.Int, pieceData [][]byte, metadata [][]eip712.MetadataEntry) (*eip712.AuthSignature, error) {
+func (s *Signer) SignAddPieces(clientDataSetId, nonce *big.Int, pieceData [][]byte, metadata [][]eip712.MetadataEntry) (*eip712.AuthSignature, error) {
 	cids := make([]map[string]interface{}, len(pieceData))
 	for i, data := range pieceData {
 		cids[i] = map[string]interface{}{
@@ -118,7 +118,7 @@ func (s *Signer) SignAddPieces(clientDataSetId, firstAdded *big.Int, pieceData [
 
 	message := map[string]interface{}{
 		"clientDataSetId": clientDataSetId,
-		"firstAdded":      firstAdded,
+		"nonce":           nonce,
 		"pieceData":       cids,
 		"pieceMetadata":   pieceMetadata,
 	}

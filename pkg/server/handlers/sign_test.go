@@ -188,8 +188,8 @@ func TestSignAddPieces_Success(t *testing.T) {
 	)
 
 	nb := sign.PiecesAddCaveats{
-		DataSet:    big.NewInt(123),
-		FirstAdded: big.NewInt(0),
+		DataSet: big.NewInt(123),
+		Nonce:   big.NewInt(0),
 		PieceData: [][]byte{
 			testutil.Must(hex.DecodeString("0001020304"))(t),
 			testutil.Must(hex.DecodeString("0506070809"))(t),

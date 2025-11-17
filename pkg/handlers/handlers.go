@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/labstack/echo/v4"
+
 	"github.com/storacha/piri-signing-service/pkg/signer"
 	"github.com/storacha/piri-signing-service/pkg/types"
 )
@@ -86,10 +87,10 @@ func (h *Handler) SignAddPieces(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid clientDataSetId")
 	}
 
-	// Parse firstAdded
-	firstAdded, ok := new(big.Int).SetString(req.FirstAdded, 10)
+	// Parse nonce
+	nonce, ok := new(big.Int).SetString(req.Nonce, 10)
 	if !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid firstAdded")
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid nonce/firstAdded")
 	}
 
 	// Parse piece data (convert hex strings to bytes)
@@ -99,7 +100,7 @@ func (h *Handler) SignAddPieces(c echo.Context) error {
 	}
 
 	// Sign the data
-	signature, err := h.signer.SignAddPieces(clientDataSetId, firstAdded, pieceData, req.Metadata)
+	signature, err := h.signer.SignAddPieces(clientDataSetId, nonce, pieceData, req.Metadata)
 	if err != nil {
 		c.Logger().Errorf("Error signing AddPieces: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Signing error: %v", err))

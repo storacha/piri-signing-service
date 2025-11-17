@@ -44,13 +44,13 @@ func (s *Signer) SignCreateDataSet(ctx context.Context,
 func (s *Signer) SignAddPieces(ctx context.Context,
 	issuer ucan.Signer,
 	clientDataSetId *big.Int,
-	firstAdded *big.Int,
+	nonce *big.Int,
 	pieceData [][]byte,
 	metadata [][]eip712.MetadataEntry,
 	proofs [][]ipld.Link,
 	proofData [][]message.AgentMessage,
 	options ...delegation.Option) (*eip712.AuthSignature, error) {
-	return s.signer.SignAddPieces(clientDataSetId, firstAdded, pieceData, metadata)
+	return s.signer.SignAddPieces(clientDataSetId, nonce, pieceData, metadata)
 }
 
 // SignSchedulePieceRemovals signs a SchedulePieceRemovals operation directly
