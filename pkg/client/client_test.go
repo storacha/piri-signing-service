@@ -13,6 +13,8 @@ import (
 	"github.com/storacha/go-ucanto/client"
 	"github.com/storacha/go-ucanto/core/delegation"
 	"github.com/storacha/go-ucanto/core/invocation"
+	"github.com/storacha/go-ucanto/core/ipld"
+	"github.com/storacha/go-ucanto/core/message"
 	"github.com/storacha/go-ucanto/core/receipt"
 	"github.com/storacha/go-ucanto/core/receipt/fx"
 	"github.com/storacha/go-ucanto/core/receipt/ran"
@@ -111,11 +113,15 @@ func TestClient_SignAddPieces(t *testing.T) {
 		{{Key: "piece1-key", Value: "piece1-value"}},
 		{{Key: "piece2-key", Value: "piece2-value"}},
 	}
+	task := testutil.RandomCID(t)
 	rcpt, err := receipt.Issue(
 		testutil.Alice,
 		result.Ok[ok.Unit, failure.IPLDBuilderFailure](ok.Unit{}),
-		ran.FromLink(testutil.RandomCID(t)),
+		ran.FromLink(task),
 	)
+	require.NoError(t, err)
+
+	msg, err := message.Build(nil, []receipt.AnyReceipt{rcpt})
 	require.NoError(t, err)
 
 	signature, err := client.SignAddPieces(
@@ -125,7 +131,8 @@ func TestClient_SignAddPieces(t *testing.T) {
 		firstAdded,
 		pieceData,
 		metadata,
-		[][]receipt.AnyReceipt{{rcpt}},
+		[][]ipld.Link{{task}},
+		[][]message.AgentMessage{{msg}},
 		delegation.WithProof(delegation.FromDelegation(mkproof(t))),
 	)
 	require.NoError(t, err)

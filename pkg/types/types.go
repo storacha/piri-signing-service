@@ -7,7 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/storacha/filecoin-services/go/eip712"
 	"github.com/storacha/go-ucanto/core/delegation"
-	"github.com/storacha/go-ucanto/core/receipt"
+	"github.com/storacha/go-ucanto/core/ipld"
+	"github.com/storacha/go-ucanto/core/message"
 	"github.com/storacha/go-ucanto/ucan"
 )
 
@@ -69,7 +70,8 @@ type SigningService interface {
 		firstAdded *big.Int,
 		pieceData [][]byte,
 		metadata [][]eip712.MetadataEntry,
-		proofs [][]receipt.AnyReceipt,
+		proofs [][]ipld.Link, // links to `blob/accept` tasks
+		proofData [][]message.AgentMessage, // invocations and receipts for the proof chain
 		options ...delegation.Option,
 	) (*eip712.AuthSignature, error)
 

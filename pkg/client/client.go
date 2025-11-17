@@ -15,6 +15,7 @@ import (
 	"github.com/storacha/go-ucanto/core/delegation"
 	"github.com/storacha/go-ucanto/core/invocation"
 	"github.com/storacha/go-ucanto/core/ipld"
+	"github.com/storacha/go-ucanto/core/message"
 	"github.com/storacha/go-ucanto/core/receipt"
 	"github.com/storacha/go-ucanto/core/result"
 	fdm "github.com/storacha/go-ucanto/core/result/failure/datamodel"
@@ -108,18 +109,10 @@ func (c *Client) SignAddPieces(
 	firstAdded *big.Int,
 	pieceData [][]byte,
 	metadata [][]eip712.MetadataEntry,
-	proofs [][]receipt.AnyReceipt,
+	proofs [][]ipld.Link,
+	proofData [][]message.AgentMessage,
 	options ...delegation.Option,
 ) (*eip712.AuthSignature, error) {
-	proofLinks := make([][]ipld.Link, 0, len(proofs))
-	for _, ps := range proofs {
-		links := make([]ipld.Link, 0, len(ps))
-		for _, r := range ps {
-			links = append(links, r.Root().Link())
-		}
-		proofLinks = append(proofLinks, links)
-	}
-
 	metaModel := make([]sign.Metadata, 0, len(metadata))
 	for _, m := range metadata {
 		metaModel = append(metaModel, fromEIP712MetadataEntries(m))
@@ -136,7 +129,7 @@ func (c *Client) SignAddPieces(
 			FirstAdded: firstAdded,
 			PieceData:  pieceData,
 			Metadata:   metaModel,
-			Proofs:     proofLinks,
+			Proofs:     proofs,
 		},
 		opts...,
 	)
@@ -144,11 +137,11 @@ func (c *Client) SignAddPieces(
 		return nil, fmt.Errorf("invoking %s: %w", sign.PiecesAddAbility, err)
 	}
 
-	for _, ps := range proofs {
-		for _, r := range ps {
-			for b, err := range r.Export() {
+	for _, pd := range proofData {
+		for _, msg := range pd {
+			for b, err := range msg.Blocks() {
 				if err != nil {
-					return nil, fmt.Errorf("iterating blocks in receipt %s: %w", r.Root().Link(), err)
+					return nil, fmt.Errorf("iterating blocks in proof data %s: %w", msg.Root().Link(), err)
 				}
 				if err := inv.Attach(b); err != nil {
 					return nil, fmt.Errorf("attaching block %s: %w", b.Link(), err)
