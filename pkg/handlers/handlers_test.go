@@ -13,10 +13,11 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/labstack/echo/v4"
 	"github.com/storacha/filecoin-services/go/eip712"
-	"github.com/storacha/piri-signing-service/pkg/signer"
-	"github.com/storacha/piri-signing-service/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/storacha/piri-signing-service/pkg/signer"
+	"github.com/storacha/piri-signing-service/pkg/types"
 )
 
 // createTestSigner creates a test signer with a random key
@@ -176,7 +177,7 @@ func TestSignAddPieces_Success(t *testing.T) {
 
 	requestBody := types.AddPiecesRequest{
 		ClientDataSetId: "123",
-		FirstAdded:      "0",
+		Nonce:           "1",
 		PieceData: []string{
 			"0x0001020304",
 			"0x0506070809",
@@ -215,7 +216,7 @@ func TestSignAddPieces_InvalidDataSetId(t *testing.T) {
 
 	requestBody := types.AddPiecesRequest{
 		ClientDataSetId: "invalid",
-		FirstAdded:      "0",
+		Nonce:           "0",
 		PieceData:       []string{},
 		Metadata:        [][]eip712.MetadataEntry{},
 	}
@@ -237,14 +238,14 @@ func TestSignAddPieces_InvalidDataSetId(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, he.Code)
 }
 
-func TestSignAddPieces_InvalidFirstAdded(t *testing.T) {
+func TestSignAddPieces_InvalidNonce(t *testing.T) {
 	e := echo.New()
 	s := createTestSigner(t)
 	handler := NewHandler(s)
 
 	requestBody := types.AddPiecesRequest{
 		ClientDataSetId: "123",
-		FirstAdded:      "not-a-number",
+		Nonce:           "not-a-number",
 		PieceData:       []string{},
 		Metadata:        [][]eip712.MetadataEntry{},
 	}

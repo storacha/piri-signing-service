@@ -9,8 +9,8 @@ require (
 	github.com/labstack/gommon v0.4.2
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.21.0
-	github.com/storacha/filecoin-services/go v0.0.2
-	github.com/storacha/go-libstoracha v0.5.1
+	github.com/storacha/filecoin-services/go v0.0.3
+	github.com/storacha/go-libstoracha v0.5.2-0.20251117202811-a55c4e41e13b
 	github.com/storacha/go-ucanto v0.7.1
 	github.com/stretchr/testify v1.11.1
 )

@@ -22,7 +22,7 @@ type CreateDataSetRequest struct {
 // AddPiecesRequest represents the request payload for adding pieces
 type AddPiecesRequest struct {
 	ClientDataSetId string                   `json:"clientDataSetId"`
-	FirstAdded      string                   `json:"firstAdded"`
+	Nonce           string                   `json:"nonce"`
 	PieceData       []string                 `json:"pieceData"` // hex-encoded bytes
 	Metadata        [][]eip712.MetadataEntry `json:"metadata"`
 }
@@ -67,7 +67,7 @@ type SigningService interface {
 		ctx context.Context,
 		issuer ucan.Signer,
 		dataSet *big.Int,
-		firstAdded *big.Int,
+		nonce *big.Int,
 		pieceData [][]byte,
 		metadata [][]eip712.MetadataEntry,
 		proofs [][]ipld.Link, // links to `blob/accept` tasks
@@ -99,7 +99,7 @@ type OperationSigner interface {
 	SignCreateDataSet(dataSet *big.Int, payee common.Address, metadata []eip712.MetadataEntry) (*eip712.AuthSignature, error)
 
 	// SignAddPieces signs an AddPieces operation
-	SignAddPieces(dataSet *big.Int, firstAdded *big.Int, pieceData [][]byte, metadata [][]eip712.MetadataEntry) (*eip712.AuthSignature, error)
+	SignAddPieces(dataSet *big.Int, nonce *big.Int, pieceData [][]byte, metadata [][]eip712.MetadataEntry) (*eip712.AuthSignature, error)
 
 	// SignSchedulePieceRemovals signs a SchedulePieceRemovals operation
 	SignSchedulePieceRemovals(dataSet *big.Int, pieceIds []*big.Int) (*eip712.AuthSignature, error)

@@ -21,6 +21,7 @@ import (
 	fdm "github.com/storacha/go-ucanto/core/result/failure/datamodel"
 	ucan_http "github.com/storacha/go-ucanto/transport/http"
 	"github.com/storacha/go-ucanto/ucan"
+
 	"github.com/storacha/piri-signing-service/pkg/types"
 )
 
@@ -106,7 +107,7 @@ func (c *Client) SignAddPieces(
 	ctx context.Context,
 	issuer ucan.Signer,
 	dataSet *big.Int,
-	firstAdded *big.Int,
+	nonce *big.Int,
 	pieceData [][]byte,
 	metadata [][]eip712.MetadataEntry,
 	proofs [][]ipld.Link,
@@ -125,11 +126,11 @@ func (c *Client) SignAddPieces(
 		c.Connection.ID(),
 		c.Connection.ID().DID().String(),
 		sign.PiecesAddCaveats{
-			DataSet:    dataSet,
-			FirstAdded: firstAdded,
-			PieceData:  pieceData,
-			Metadata:   metaModel,
-			Proofs:     proofs,
+			DataSet:   dataSet,
+			Nonce:     nonce,
+			PieceData: pieceData,
+			Metadata:  metaModel,
+			Proofs:    proofs,
 		},
 		opts...,
 	)

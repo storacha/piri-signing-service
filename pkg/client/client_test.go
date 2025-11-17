@@ -90,7 +90,7 @@ func TestClient_SignAddPieces(t *testing.T) {
 			) (result.Result[sign.PiecesAddOk, failure.IPLDBuilderFailure], fx.Effects, error) {
 				req := capability.Nb()
 				assert.Equal(t, "12345", req.DataSet.String())
-				assert.Equal(t, "0", req.FirstAdded.String())
+				assert.Equal(t, "0", req.Nonce.String())
 				assert.Len(t, req.PieceData, 2)
 				assert.Equal(t, []byte("piece1"), req.PieceData[0])
 				assert.Len(t, req.Proofs, 1)

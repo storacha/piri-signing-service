@@ -14,6 +14,7 @@ import (
 	"github.com/storacha/go-ucanto/principal"
 	"github.com/storacha/go-ucanto/server"
 	"github.com/storacha/go-ucanto/ucan"
+
 	"github.com/storacha/piri-signing-service/pkg/types"
 )
 
@@ -89,12 +90,14 @@ func NewPiecesAddHandler(id principal.Signer, signer types.OperationSigner) serv
 		context server.InvocationContext,
 	) (result.Result[sign.PiecesAddOk, failure.IPLDBuilderFailure], fx.Effects, error) {
 		nb := capability.Nb()
+		nonce := nb.Nonce
+
 		log.Infow(
 			"handling signing request",
 			"ability", sign.PiecesAddAbility,
 			"issuer", invocation.Issuer().DID(),
 			"dataset", nb.DataSet.String(),
-			"firstAdded", nb.FirstAdded.String(),
+			"nonce", nonce.String(),
 			"pieces", len(nb.PieceData),
 		)
 		// issuer must have a delegation to use the service (cannot be self signed)
@@ -111,7 +114,7 @@ func NewPiecesAddHandler(id principal.Signer, signer types.OperationSigner) serv
 			metadata = append(metadata, toEIP712MetadataEntries(m))
 		}
 
-		s, err := signer.SignAddPieces(nb.DataSet, nb.FirstAdded, nb.PieceData, metadata)
+		s, err := signer.SignAddPieces(nb.DataSet, nonce, nb.PieceData, metadata)
 		if err != nil {
 			return nil, nil, fmt.Errorf("signing add pieces: %w", err)
 		}
