@@ -82,7 +82,7 @@ func TestSigner_SignAddPieces(t *testing.T) {
 		{{Key: "piece2-key", Value: "piece2-value"}},
 	}
 
-	signature, err := signer.SignAddPieces(ctx, testutil.Alice, clientDataSetId, firstAdded, pieceData, metadata, nil)
+	signature, err := signer.SignAddPieces(ctx, testutil.Alice, clientDataSetId, firstAdded, pieceData, metadata, nil, nil)
 	require.NoError(t, err)
 	assert.NotNil(t, signature)
 
