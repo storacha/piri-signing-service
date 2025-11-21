@@ -40,7 +40,7 @@ provider "aws" {
 
 
 module "app" {
-  source = "github.com/storacha/storoku//app?ref=v0.5.0"
+  source = "github.com/storacha/storoku//app?ref=v0.5.2"
   private_key = var.private_key
   private_key_env_var = "SIGNING_SERVICE_SERVICE_KEY"
   httpport = 7446
@@ -61,8 +61,9 @@ module "app" {
   # enter secret values your app will use here -- these will be available
   # as env vars in the container at runtime
   secrets = { 
-    "SIGNING_SERVICE_SIGNING_KEY" = var.signing_key
   }
+  # enter external secrets (provisioned out-of-band) here
+  external_secrets = ["SIGNING_SERVICE_SIGNING_KEY",]
   # enter any sqs queues you want to create here
   queues = []
   caches = []
