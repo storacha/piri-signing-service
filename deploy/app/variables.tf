@@ -50,8 +50,3 @@ variable "network" {
   type        = string
   default     = "hot"
 }
-
-variable "signing_key" {
-  description = "value for signing_service_signing_key secret"
-  type = string
-}
