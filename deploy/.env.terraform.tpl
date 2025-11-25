@@ -3,7 +3,6 @@ TF_WORKSPACE= # your name here
 TF_VAR_app=signer
 TF_VAR_did= # did for your env
 TF_VAR_private_key= # private_key or your env -- do not commit to repo!
-TF_VAR_signing_key= # enter a value for SIGNING_SERVICE_SIGNING_KEY secret
 TF_VAR_allowed_account_id=505595374361
 TF_VAR_region=us-east-2
 TF_VAR_cloudflare_zone_id=37783d6f032b78cd97ce37ab6fd42848

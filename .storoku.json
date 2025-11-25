@@ -14,7 +14,8 @@
   "secrets": [
     {
       "name": "SIGNING_SERVICE_SIGNING_KEY",
-      "variable": true
+      "variable": false,
+      "external": true
     }
   ],
   "tables": null,
