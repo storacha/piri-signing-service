@@ -40,7 +40,7 @@ provider "aws" {
 
 
 module "app" {
-  source = "github.com/storacha/storoku//app?ref=v0.5.2"
+  source = "github.com/storacha/storoku//app?ref=v0.5.2_co"
   private_key = var.private_key
   private_key_env_var = "SIGNING_SERVICE_SERVICE_KEY"
   httpport = 7446
