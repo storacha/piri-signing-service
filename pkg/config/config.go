@@ -114,6 +114,10 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("invalid contract address: %s", c.ServiceContractAddress)
 	}
 
+	// mutually exclusive configuration values
+	if c.ServiceKey != "" && c.ServiceKeyFile != "" {
+		return fmt.Errorf("only one of service_key or service_key_file can be specified")
+	}
 	// If using service key or service key file, a did web is required
 	if c.ServiceKey != "" || c.ServiceKeyFile != "" {
 		if c.ServiceDID == "" {
