@@ -1,20 +1,27 @@
-FROM golang:1.25-bookworm AS build
+# Build stage - use native platform for faster cross-compilation
+FROM --platform=$BUILDPLATFORM golang:1.25-bookworm AS build
 
-WORKDIR /signer
+ARG TARGETARCH
+ARG TARGETOS=linux
 
-COPY go.* .
+WORKDIR /src
+
+# Copy dependency files first for better layer caching
+COPY go.mod go.sum ./
 RUN go mod download
+
+# Copy source code
 COPY . .
 
-ARG VERSION
-ARG DATE
+# Build with cross-compilation and stripped binary
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -ldflags="-s -w" -o /app github.com/storacha/piri-signing-service
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
-    go build -ldflags="-w -s" -o signer github.com/storacha/piri-signing-service
+FROM alpine:latest AS prod
 
-FROM scratch
-COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=build /signer/signer /usr/bin/
+USER nobody
+
+COPY --from=build /app /usr/bin/signer
 
 EXPOSE 7446
 
