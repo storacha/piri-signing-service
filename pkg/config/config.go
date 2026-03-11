@@ -2,9 +2,13 @@ package config
 
 import (
 	"crypto/ecdsa"
+	crypto_ed25519 "crypto/ed25519"
+	"crypto/x509"
 	"encoding/hex"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -36,6 +40,7 @@ type Config struct {
 	RPCUrl                  string `mapstructure:"rpc_url"`
 	ServiceContractAddress  string `mapstructure:"service_contract_address"`
 	ServiceKey              string `mapstructure:"service_key"`
+	ServiceKeyFile          string `mapstructure:"service_key_file"`
 	ServiceDID              string `mapstructure:"service_did"`
 	SigningKey              string `mapstructure:"signing_key"`
 	SigningKeyPath          string `mapstructure:"signing_key_path"`
@@ -109,14 +114,14 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("invalid contract address: %s", c.ServiceContractAddress)
 	}
 
-	// If using service key, a did web is required
-	if c.ServiceKey != "" {
+	// If using service key or service key file, a did web is required
+	if c.ServiceKey != "" || c.ServiceKeyFile != "" {
 		if c.ServiceDID == "" {
-			return fmt.Errorf("did is required when using service key")
+			return fmt.Errorf("service_did is required when using service_key or service_key_file")
 		}
 
 		if !strings.HasPrefix(c.ServiceDID, "did:web:") {
-			return fmt.Errorf("did must be a did:web")
+			return fmt.Errorf("service_did must be a did:web")
 		}
 	}
 
@@ -157,6 +162,71 @@ func LoadServiceIdentity(key string, did string) (principal.Signer, error) {
 	}
 
 	return s, nil
+}
+
+// LoadServiceIdentityFromFile loads an Ed25519 private key from a PKCS#8 PEM file
+// and wraps it in a signer along a DID
+func LoadServiceIdentityFromFile(keyFilePath string, did string) (principal.Signer, error) {
+	k, err := SignerFromEd25519PEMFile(keyFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("loading service key from PEM file: %w", err)
+	}
+
+	d, err := ucantodid.Parse(did)
+	if err != nil {
+		return nil, fmt.Errorf("parsing service DID: %w", err)
+	}
+
+	s, err := signer.Wrap(k, d)
+	if err != nil {
+		return nil, fmt.Errorf("wrapping service key: %w", err)
+	}
+
+	return s, nil
+}
+
+// SignerFromEd25519PEMFile loads an Ed25519 private key from a PKCS#8 PEM file.
+func SignerFromEd25519PEMFile(path string) (principal.Signer, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open key file: %w", err)
+	}
+	defer f.Close()
+
+	pemData, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read key file: %w", err)
+	}
+
+	var privateKey *crypto_ed25519.PrivateKey
+	rest := pemData
+	for {
+		block, remaining := pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		rest = remaining
+
+		if block.Type == "PRIVATE KEY" {
+			parsedKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse PKCS#8 private key: %w", err)
+			}
+
+			key, ok := parsedKey.(crypto_ed25519.PrivateKey)
+			if !ok {
+				return nil, fmt.Errorf("key is not an Ed25519 private key")
+			}
+			privateKey = &key
+			break
+		}
+	}
+
+	if privateKey == nil {
+		return nil, fmt.Errorf("no PRIVATE KEY block found in PEM file")
+	}
+
+	return ed25519.FromRaw(*privateKey)
 }
 
 // LoadSigningKey loads a signing key from a string

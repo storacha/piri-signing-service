@@ -16,6 +16,7 @@ import (
 	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/storacha/go-ucanto/principal"
 	ucan_http "github.com/storacha/go-ucanto/transport/http"
 	"github.com/storacha/piri-signing-service/pkg/config"
 	"github.com/storacha/piri-signing-service/pkg/handlers"
@@ -58,6 +59,9 @@ func init() {
 	rootCmd.Flags().String("service-key", "", "Multibase-encoded private service key string")
 	cobra.CheckErr(viper.BindPFlag("service_key", rootCmd.Flags().Lookup("service-key")))
 
+	rootCmd.Flags().String("service-key-file", "", "Path to Ed25519 PEM key file for service identity")
+	cobra.CheckErr(viper.BindPFlag("service_key_file", rootCmd.Flags().Lookup("service-key-file")))
+
 	rootCmd.Flags().String("service-did", "", "A DID web that identifies this service publicly")
 	cobra.CheckErr(viper.BindPFlag("service_did", rootCmd.Flags().Lookup("service-did")))
 
@@ -83,10 +87,21 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("loading configuration: %w", err)
 	}
 
-	// Load service identity
-	id, err := config.LoadServiceIdentity(cfg.ServiceKey, cfg.ServiceDID)
-	if err != nil {
-		return fmt.Errorf("loading service identity: %w", err)
+	// Load service identity - prefer PEM key file over multibase key
+	var id principal.Signer
+	switch {
+	case cfg.ServiceKeyFile != "":
+		id, err = config.LoadServiceIdentityFromFile(cfg.ServiceKeyFile, cfg.ServiceDID)
+		if err != nil {
+			return fmt.Errorf("loading service identity from file: %w", err)
+		}
+	case cfg.ServiceKey != "":
+		id, err = config.LoadServiceIdentity(cfg.ServiceKey, cfg.ServiceDID)
+		if err != nil {
+			return fmt.Errorf("loading service identity: %w", err)
+		}
+	default:
+		return fmt.Errorf("either service_key or service_key_file must be provided")
 	}
 
 	// Load private signing key
