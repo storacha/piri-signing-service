@@ -21,7 +21,8 @@
   "tables": null,
   "networks": [
     "warm",
-    "forge"
+    "forge",
+    "test"
   ],
   "writeToContainer": false
 }
